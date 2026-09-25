@@ -10,9 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PainelRouteImport } from './routes/_painel'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as PainelCadastrosRouteImport } from './routes/_painel.cadastros'
 import { Route as PainelComprasRouteImport } from './routes/_painel.compras'
 import { Route as PainelConfiguracoesRouteImport } from './routes/_painel.configuracoes'
+import { Route as PainelDashboardRouteImport } from './routes/_painel.dashboard'
 import { Route as PainelEstoqueRouteImport } from './routes/_painel.estoque'
 import { Route as PainelManutencaoRouteImport } from './routes/_painel.manutencao'
 import { Route as PainelPedidosRouteImport } from './routes/_painel.pedidos'
@@ -25,57 +28,73 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PainelCadastrosRoute = PainelCadastrosRouteImport.update({
-  id: '/_painel/cadastros',
-  path: '/cadastros',
+const PainelRoute = PainelRouteImport.update({
+  id: '/_painel',
   getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PainelCadastrosRoute = PainelCadastrosRouteImport.update({
+  id: '/cadastros',
+  path: '/cadastros',
+  getParentRoute: () => PainelRoute,
 } as any)
 const PainelComprasRoute = PainelComprasRouteImport.update({
-  id: '/_painel/compras',
+  id: '/compras',
   path: '/compras',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => PainelRoute,
 } as any)
 const PainelConfiguracoesRoute = PainelConfiguracoesRouteImport.update({
-  id: '/_painel/configuracoes',
+  id: '/configuracoes',
   path: '/configuracoes',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => PainelRoute,
+} as any)
+const PainelDashboardRoute = PainelDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => PainelRoute,
 } as any)
 const PainelEstoqueRoute = PainelEstoqueRouteImport.update({
-  id: '/_painel/estoque',
+  id: '/estoque',
   path: '/estoque',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => PainelRoute,
 } as any)
 const PainelManutencaoRoute = PainelManutencaoRouteImport.update({
-  id: '/_painel/manutencao',
+  id: '/manutencao',
   path: '/manutencao',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => PainelRoute,
 } as any)
 const PainelPedidosRoute = PainelPedidosRouteImport.update({
-  id: '/_painel/pedidos',
+  id: '/pedidos',
   path: '/pedidos',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => PainelRoute,
 } as any)
 const PainelPerdasRoute = PainelPerdasRouteImport.update({
-  id: '/_painel/perdas',
+  id: '/perdas',
   path: '/perdas',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => PainelRoute,
 } as any)
 const PainelProducaoRoute = PainelProducaoRouteImport.update({
-  id: '/_painel/producao',
+  id: '/producao',
   path: '/producao',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => PainelRoute,
 } as any)
 const PainelRelatoriosRoute = PainelRelatoriosRouteImport.update({
-  id: '/_painel/relatorios',
+  id: '/relatorios',
   path: '/relatorios',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => PainelRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/cadastros': typeof PainelCadastrosRoute
   '/compras': typeof PainelComprasRoute
   '/configuracoes': typeof PainelConfiguracoesRoute
+  '/dashboard': typeof PainelDashboardRoute
   '/estoque': typeof PainelEstoqueRoute
   '/manutencao': typeof PainelManutencaoRoute
   '/pedidos': typeof PainelPedidosRoute
@@ -85,9 +104,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/cadastros': typeof PainelCadastrosRoute
   '/compras': typeof PainelComprasRoute
   '/configuracoes': typeof PainelConfiguracoesRoute
+  '/dashboard': typeof PainelDashboardRoute
   '/estoque': typeof PainelEstoqueRoute
   '/manutencao': typeof PainelManutencaoRoute
   '/pedidos': typeof PainelPedidosRoute
@@ -98,9 +119,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_painel': typeof PainelRouteWithChildren
+  '/login': typeof LoginRoute
   '/_painel/cadastros': typeof PainelCadastrosRoute
   '/_painel/compras': typeof PainelComprasRoute
   '/_painel/configuracoes': typeof PainelConfiguracoesRoute
+  '/_painel/dashboard': typeof PainelDashboardRoute
   '/_painel/estoque': typeof PainelEstoqueRoute
   '/_painel/manutencao': typeof PainelManutencaoRoute
   '/_painel/pedidos': typeof PainelPedidosRoute
@@ -112,9 +136,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/cadastros'
     | '/compras'
     | '/configuracoes'
+    | '/dashboard'
     | '/estoque'
     | '/manutencao'
     | '/pedidos'
@@ -124,9 +150,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/cadastros'
     | '/compras'
     | '/configuracoes'
+    | '/dashboard'
     | '/estoque'
     | '/manutencao'
     | '/pedidos'
@@ -136,9 +164,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/_painel'
+    | '/login'
     | '/_painel/cadastros'
     | '/_painel/compras'
     | '/_painel/configuracoes'
+    | '/_painel/dashboard'
     | '/_painel/estoque'
     | '/_painel/manutencao'
     | '/_painel/pedidos'
@@ -149,15 +180,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  PainelCadastrosRoute: typeof PainelCadastrosRoute
-  PainelComprasRoute: typeof PainelComprasRoute
-  PainelConfiguracoesRoute: typeof PainelConfiguracoesRoute
-  PainelEstoqueRoute: typeof PainelEstoqueRoute
-  PainelManutencaoRoute: typeof PainelManutencaoRoute
-  PainelPedidosRoute: typeof PainelPedidosRoute
-  PainelPerdasRoute: typeof PainelPerdasRoute
-  PainelProducaoRoute: typeof PainelProducaoRoute
-  PainelRelatoriosRoute: typeof PainelRelatoriosRoute
+  PainelRoute: typeof PainelRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -169,83 +193,126 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_painel': {
+      id: '/_painel'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_painel/cadastros': {
       id: '/_painel/cadastros'
       path: '/cadastros'
       fullPath: '/cadastros'
       preLoaderRoute: typeof PainelCadastrosRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PainelRoute
     }
     '/_painel/compras': {
       id: '/_painel/compras'
       path: '/compras'
       fullPath: '/compras'
       preLoaderRoute: typeof PainelComprasRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PainelRoute
     }
     '/_painel/configuracoes': {
       id: '/_painel/configuracoes'
       path: '/configuracoes'
       fullPath: '/configuracoes'
       preLoaderRoute: typeof PainelConfiguracoesRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PainelRoute
+    }
+    '/_painel/dashboard': {
+      id: '/_painel/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof PainelDashboardRouteImport
+      parentRoute: typeof PainelRoute
     }
     '/_painel/estoque': {
       id: '/_painel/estoque'
       path: '/estoque'
       fullPath: '/estoque'
       preLoaderRoute: typeof PainelEstoqueRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PainelRoute
     }
     '/_painel/manutencao': {
       id: '/_painel/manutencao'
       path: '/manutencao'
       fullPath: '/manutencao'
       preLoaderRoute: typeof PainelManutencaoRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PainelRoute
     }
     '/_painel/pedidos': {
       id: '/_painel/pedidos'
       path: '/pedidos'
       fullPath: '/pedidos'
       preLoaderRoute: typeof PainelPedidosRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PainelRoute
     }
     '/_painel/perdas': {
       id: '/_painel/perdas'
       path: '/perdas'
       fullPath: '/perdas'
       preLoaderRoute: typeof PainelPerdasRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PainelRoute
     }
     '/_painel/producao': {
       id: '/_painel/producao'
       path: '/producao'
       fullPath: '/producao'
       preLoaderRoute: typeof PainelProducaoRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PainelRoute
     }
     '/_painel/relatorios': {
       id: '/_painel/relatorios'
       path: '/relatorios'
       fullPath: '/relatorios'
       preLoaderRoute: typeof PainelRelatoriosRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PainelRoute
     }
   }
 }
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+interface PainelRouteChildren {
+  PainelCadastrosRoute: typeof PainelCadastrosRoute
+  PainelComprasRoute: typeof PainelComprasRoute
+  PainelConfiguracoesRoute: typeof PainelConfiguracoesRoute
+  PainelDashboardRoute: typeof PainelDashboardRoute
+  PainelEstoqueRoute: typeof PainelEstoqueRoute
+  PainelManutencaoRoute: typeof PainelManutencaoRoute
+  PainelPedidosRoute: typeof PainelPedidosRoute
+  PainelPerdasRoute: typeof PainelPerdasRoute
+  PainelProducaoRoute: typeof PainelProducaoRoute
+  PainelRelatoriosRoute: typeof PainelRelatoriosRoute
+}
+
+const PainelRouteChildren: PainelRouteChildren = {
   PainelCadastrosRoute: PainelCadastrosRoute,
   PainelComprasRoute: PainelComprasRoute,
   PainelConfiguracoesRoute: PainelConfiguracoesRoute,
+  PainelDashboardRoute: PainelDashboardRoute,
   PainelEstoqueRoute: PainelEstoqueRoute,
   PainelManutencaoRoute: PainelManutencaoRoute,
   PainelPedidosRoute: PainelPedidosRoute,
   PainelPerdasRoute: PainelPerdasRoute,
   PainelProducaoRoute: PainelProducaoRoute,
   PainelRelatoriosRoute: PainelRelatoriosRoute,
+}
+
+const PainelRouteWithChildren =
+  PainelRoute._addFileChildren(PainelRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  PainelRoute: PainelRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
