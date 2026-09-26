@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_painel/dashboard")({
 });
 
 const columns: Column<OrdemProducao>[] = [
-  { key: "id", header: "Ordem", cell: (r) => <span className="font-mono text-xs font-medium">{r.id}</span> },
+  { key: "id", header: "Ordem", primary: true, cell: (r) => <span className="font-mono text-xs font-medium">{r.id}</span> },
   { key: "produto", header: "Produto", cell: (r) => r.produto },
   { key: "lote", header: "Lote", cell: (r) => <span className="font-mono text-xs">{r.lote}</span>, className: "hidden md:table-cell" },
   { key: "volume", header: "Volume", cell: (r) => <span className="tabular-nums">{r.volume}</span>, className: "text-right" },
