@@ -14,7 +14,7 @@ function PainelLayout() {
       <AppSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <AppHeader userName={mockUser.name} userRole={mockUser.role} notifications={mockNotifications} />
-        <main className="flex-1 space-y-6 p-4 pb-24 lg:p-6 lg:pb-6">
+        <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 p-4 pb-24 sm:p-6 md:pb-6 lg:p-8">
           <Outlet />
         </main>
       </div>
