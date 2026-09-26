@@ -12,7 +12,7 @@ export function MobileNav() {
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-sidebar-border bg-sidebar text-sidebar-foreground lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-sidebar-border bg-sidebar pb-[env(safe-area-inset-bottom)] text-sidebar-foreground md:hidden">
         {items.map((item) => (
           <Link
             key={item.to}

@@ -28,7 +28,7 @@ export function AppHeader({ userName, userRole, notifications }: Props) {
   return (
     <header className="sticky top-0 z-30 grid h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b bg-card px-4 lg:px-6">
       <div className="min-w-0">
-        <Brand className="text-primary lg:hidden" />
+        <Brand className="text-primary md:hidden" />
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <DropdownMenu>
