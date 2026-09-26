@@ -8,3 +8,10 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+# Architecture rules
+
+- Internal pages live under the pathless `_painel` layout (sidebar + header + mobile nav) — one shared shell for all modules.
+- Navigation items are defined only in `src/components/layout/nav-items.ts` — sidebar and mobile nav read from one source.
+- Mock data lives only in `src/lib/mock/` — easy to delete when real Supabase queries arrive.
+- Reusable UI blocks live in `src/components/shared/` (StatCard, DataTable, StatusBadge, FilterBar, FormModal, FormField, ChartCard, PageHeader, EmptyState).
