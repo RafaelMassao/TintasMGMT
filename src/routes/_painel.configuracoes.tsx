@@ -83,7 +83,7 @@ function ConfiguracoesPage() {
             </Button>
             <ConfirmDialog
               description="O registro será removido permanentemente. Deseja continuar?"
-              onConfirm={() => new Promise((r) => setTimeout(r, 800)).then(() => notify.success("Registro excluído"))}
+              onConfirm={() => new Promise((r) => setTimeout(r, 800)).then(() => { notify.success("Registro excluído"); })}
               trigger={
                 <Button variant="outline">
                   <Trash2 /> Confirmação de exclusão
