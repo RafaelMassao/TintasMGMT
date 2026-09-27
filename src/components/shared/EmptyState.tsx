@@ -10,8 +10,8 @@ export function EmptyState({
   compact = false,
 }: {
   title: string;
-  description?: string;
-  action?: ReactNode;
+  description?: string | undefined;
+  action?: ReactNode | undefined;
   icon?: LucideIcon;
   compact?: boolean;
 }) {

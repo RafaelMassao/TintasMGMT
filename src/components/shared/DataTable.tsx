@@ -38,7 +38,7 @@ export function DataTable<T>({
   if (rows.length === 0)
     return <EmptyState compact title={emptyTitle} description={emptyDescription} action={emptyAction} />;
 
-  const primary = columns.find((c) => c.primary) ?? columns[0];
+  const primary = (columns.find((c) => c.primary) ?? columns[0])!;
   const rest = columns.filter((c) => c !== primary && !c.hideOnMobile);
 
   return (
