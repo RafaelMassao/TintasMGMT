@@ -4,13 +4,17 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
+import { podeAcessar, type Perfil } from "@/lib/permissoes";
 
 export const Route = createFileRoute("/_painel")({
   ssr: false,
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/login" });
-    return { user: data.user };
+    const { data: linhas } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
+    const perfis = ((linhas ?? []) as { role: Perfil }[]).map((l) => l.role);
+    if (!podeAcessar(perfis, location.pathname)) throw redirect({ to: "/sem-acesso" });
+    return { user: data.user, perfis };
   },
   component: PainelLayout,
 });
