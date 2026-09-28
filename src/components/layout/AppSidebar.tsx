@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { navItems } from "./nav-items";
+import { useNavPermitida } from "./use-nav-permitida";
 import { Brand } from "./Brand";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -8,6 +8,7 @@ const linkBase =
 const linkActive = "!border-sidebar-primary bg-sidebar-accent !text-sidebar-accent-foreground";
 
 export function NavList({ onNavigate }: { onNavigate?: () => void }) {
+  const navItems = useNavPermitida();
   return (
     <nav className="flex flex-col gap-0.5">
       {navItems.map((item) => (
@@ -22,6 +23,7 @@ export function NavList({ onNavigate }: { onNavigate?: () => void }) {
 
 /** Tablet: trilho só com ícones. Desktop: menu completo. */
 export function AppSidebar() {
+  const navItems = useNavPermitida();
   return (
     <>
       <aside className="sticky top-0 hidden h-screen w-16 shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar py-3 md:flex lg:hidden">

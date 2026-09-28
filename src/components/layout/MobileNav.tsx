@@ -2,22 +2,22 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { navItems } from "./nav-items";
+import { useNavPermitida } from "./use-nav-permitida";
 import { NavList } from "./AppSidebar";
 import { Brand } from "./Brand";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
-  const items = navItems.filter((i) => i.mobile);
+  const items = useNavPermitida().filter((i) => i.mobile);
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-sidebar-border bg-sidebar pb-[env(safe-area-inset-bottom)] text-sidebar-foreground md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-sidebar-border bg-sidebar pb-[env(safe-area-inset-bottom)] text-sidebar-foreground md:hidden">
         {items.map((item) => (
           <Link
             key={item.to}
             to={item.to}
-            className="flex flex-col items-center gap-1 py-2 text-[11px] font-medium text-sidebar-foreground/70"
+            className="flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium text-sidebar-foreground/70"
             activeProps={{ className: "!text-sidebar-primary" }}
           >
             <item.icon className="h-5 w-5" />
@@ -26,7 +26,7 @@ export function MobileNav() {
         ))}
         <button
           onClick={() => setOpen(true)}
-          className="flex flex-col items-center gap-1 py-2 text-[11px] font-medium text-sidebar-foreground/70"
+          className="flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium text-sidebar-foreground/70"
         >
           <Menu className="h-5 w-5" />
           Mais
