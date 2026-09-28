@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_painel")({
 function PainelLayout() {
   const { user } = Route.useRouteContext();
   const nome =
-    (user.user_metadata?.nome as string | undefined) ?? user.email?.split("@")[0] ?? "Usuário";
+    (user.user_metadata?.["nome"] as string | undefined) ?? user.email?.split("@")[0] ?? "Usuário";
 
   return (
     <TooltipProvider delayDuration={200}>
