@@ -241,3 +241,16 @@ on conflict (descricao) do nothing;
 insert into public.motivos_atraso (descricao) values
   ('Falta de matéria-prima'), ('Equipamento parado'), ('Falta de embalagem'), ('Reprocesso'), ('Falta de mão de obra')
 on conflict (descricao) do nothing;
+
+-- ---------- 6. Sem exclusão física nos cadastros ----------
+-- Cadastros são apenas inativados (ativo = false) para preservar o histórico
+-- de produção, pedidos, estoque e manutenção.
+do $$
+declare t text;
+begin
+  foreach t in array array['cores','embalagens','produtos','clientes','fornecedores','materiais',
+                           'equipamentos','tanques','motivos_perda','motivos_atraso'] loop
+    execute format('drop policy if exists "Administrador exclui" on public.%I', t);
+    execute format('revoke delete on public.%I from authenticated', t);
+  end loop;
+end $$;
