@@ -19,7 +19,7 @@ const ACESSO: Record<string, Perfil[]> = {
   "/compras": ["estoque"],
   "/pedidos": ["vendas"],
   "/manutencao": ["manutencao"], // equipamentos, manutenções e paradas
-  "/cadastros": ["vendas", "manutencao", "estoque"], // clientes, equipamentos, itens
+  "/cadastros": ["vendas", "manutencao", "estoque", "producao"], // leitura para todos; edição conforme o cadastro
   "/relatorios": [],
   "/configuracoes": [],
 };
