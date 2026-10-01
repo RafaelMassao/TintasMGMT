@@ -15,7 +15,7 @@ export type Campo =
       filtro?: { coluna: string; valor: string };
     };
 
-export type Coluna = { chave: string; titulo: string; valor: (r: Registro) => string; principal?: boolean; esconderCelular?: boolean };
+export type Coluna = { chave: string; titulo: string; valor: (r: any) => string; principal?: boolean; esconderCelular?: boolean };
 export type Registro = Record<string, any> & { id: string; ativo: boolean };
 
 export type CadastroConfig = {
@@ -39,7 +39,7 @@ export const TIPOS_EQUIPAMENTO = [
   { value: "maquina_pintura", label: "Máquina de pintura" },
 ];
 
-const rel = (r: Registro, k: string, c = "nome") => (r[k]?.[c] as string | undefined) ?? "—";
+const rel = (r: any, k: string, c = "nome") => (r[k]?.[c] as string | undefined) ?? "—";
 const t = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : String(v));
 
 const codigo: Campo = { nome: "codigo", rotulo: "Código", tipo: "texto", obrigatorio: true, max: 40 };

@@ -252,7 +252,7 @@ function Formulario({ config, registro, onClose }: { config: CadastroConfig; reg
       onSubmit={enviar}
     >
       {config.campos.map((c) => (
-        <FormField key={c.nome} id={c.nome} label={c.rotulo + (c.obrigatorio ? " *" : "")} error={erros[c.nome]}>
+        <FormField key={c.nome} id={c.nome} label={c.rotulo + (c.obrigatorio ? " *" : "")} {...(erros[c.nome] ? { error: erros[c.nome]! } : {})}>
           <CampoInput campo={c} valor={valores[c.nome] ?? ""} onChange={(v) => set(c.nome, v)} />
         </FormField>
       ))}
@@ -310,7 +310,7 @@ function Escolha({
   carregando?: boolean;
 }) {
   return (
-    <Select value={valor || (opcional ? NENHUM : undefined)} onValueChange={(v) => onChange(v === NENHUM ? "" : v)}>
+    <Select value={valor || (opcional ? NENHUM : "")} onValueChange={(v) => onChange(v === NENHUM ? "" : v)}>
       <SelectTrigger id={id}>
         <SelectValue placeholder={carregando ? "Carregando..." : "Selecione"} />
       </SelectTrigger>
