@@ -1,19 +1,14 @@
 import type { Perfil } from "@/lib/permissoes";
 
-export type Campo =
-  | { nome: string; rotulo: string; tipo: "texto" | "textarea" | "email" | "cor"; obrigatorio?: boolean; max?: number }
-  | { nome: string; rotulo: string; tipo: "numero"; obrigatorio?: boolean; min?: number }
-  | { nome: string; rotulo: string; tipo: "uf"; obrigatorio?: boolean }
-  | { nome: string; rotulo: string; tipo: "opcoes"; obrigatorio?: boolean; opcoes: { value: string; label: string }[] }
-  | {
-      nome: string;
-      rotulo: string;
-      tipo: "referencia";
-      obrigatorio?: boolean;
-      tabela: string;
-      rotuloColunas: string[];
-      filtro?: { coluna: string; valor: string };
-    };
+type Base = { nome: string; rotulo: string; obrigatorio?: boolean; unico?: boolean; dica?: string };
+export type Campo = Base &
+  (
+    | { tipo: "texto" | "textarea" | "email" | "cor"; max?: number }
+    | { tipo: "numero"; min?: number }
+    | { tipo: "uf" }
+    | { tipo: "opcoes"; opcoes: { value: string; label: string }[] }
+    | { tipo: "referencia"; tabela: string; rotuloColunas: string[]; filtro?: { coluna: string; valor: string } }
+  );
 
 export type Coluna = { chave: string; titulo: string; valor: (r: any) => string; principal?: boolean; esconderCelular?: boolean };
 export type Registro = Record<string, any> & { id: string; ativo: boolean };
@@ -29,7 +24,36 @@ export type CadastroConfig = {
   editores: Perfil[];
   campos: Campo[];
   colunas: Coluna[];
+  /** Validações entre campos (ex.: máximo ≥ mínimo). Retorna erros por campo. */
+  validar?: (dados: Record<string, unknown>) => Record<string, string>;
 };
+
+const num = (v: unknown) => (v == null ? "—" : Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 }));
+
+export const TIPOS_TINTA = [
+  { value: "acrilica", label: "Acrílica" },
+  { value: "latex_pva", label: "Látex PVA" },
+  { value: "esmalte", label: "Esmalte" },
+  { value: "epoxi", label: "Epóxi" },
+  { value: "verniz", label: "Verniz" },
+  { value: "textura", label: "Textura" },
+  { value: "fundo", label: "Fundo / Primer" },
+  { value: "outra", label: "Outra" },
+];
+
+export const FAMILIAS_COR = [
+  { value: "brancos", label: "Brancos" },
+  { value: "neutros", label: "Neutros / Cinzas" },
+  { value: "pretos", label: "Pretos" },
+  { value: "amarelos", label: "Amarelos" },
+  { value: "laranjas", label: "Laranjas" },
+  { value: "vermelhos", label: "Vermelhos" },
+  { value: "rosas", label: "Rosas" },
+  { value: "violetas", label: "Violetas" },
+  { value: "azuis", label: "Azuis" },
+  { value: "verdes", label: "Verdes" },
+  { value: "marrons", label: "Marrons / Terrosos" },
+];
 
 export const TIPOS_EQUIPAMENTO = [
   { value: "tanque", label: "Tanque" },
@@ -97,16 +121,29 @@ export const CADASTROS: CadastroConfig[] = [
     campos: [
       codigo,
       nome,
-      { nome: "descricao", rotulo: "Descrição", tipo: "textarea", max: 500 },
+      { nome: "tipo_tinta", rotulo: "Tipo de tinta", tipo: "opcoes", obrigatorio: true, opcoes: TIPOS_TINTA },
       { nome: "cor_id", rotulo: "Cor", tipo: "referencia", tabela: "cores", rotuloColunas: ["codigo", "nome"] },
-      { nome: "embalagem_id", rotulo: "Embalagem", tipo: "referencia", tabela: "embalagens", rotuloColunas: ["codigo", "nome"] },
-      unidade,
+      { nome: "embalagem_id", rotulo: "Embalagem padrão", tipo: "referencia", tabela: "embalagens", rotuloColunas: ["nome"] },
+      { ...unidade, obrigatorio: true },
+      { nome: "estoque_minimo", rotulo: "Estoque mínimo", tipo: "numero", obrigatorio: true, min: 0 },
+      { nome: "estoque_maximo", rotulo: "Estoque máximo", tipo: "numero", obrigatorio: true, min: 0 },
     ],
+    validar: (d) =>
+      typeof d["estoque_minimo"] === "number" && typeof d["estoque_maximo"] === "number" && d["estoque_maximo"] < d["estoque_minimo"]
+        ? { estoque_maximo: "Deve ser maior ou igual ao estoque mínimo" }
+        : {},
     colunas: [
       { chave: "codigo", titulo: "Código", valor: (r) => r.codigo },
       { chave: "nome", titulo: "Nome", valor: (r) => r.nome, principal: true },
+      { chave: "tipo", titulo: "Tipo", valor: (r) => TIPOS_TINTA.find((x) => x.value === r.tipo_tinta)?.label ?? "—" },
       { chave: "cor", titulo: "Cor", valor: (r) => rel(r, "cores") },
       { chave: "emb", titulo: "Embalagem", valor: (r) => rel(r, "embalagens"), esconderCelular: true },
+      {
+        chave: "est",
+        titulo: "Estoque mín./máx.",
+        valor: (r) => `${num(r.estoque_minimo)} / ${num(r.estoque_maximo)} ${r.unidades_medida?.sigla ?? ""}`,
+        esconderCelular: true,
+      },
     ],
   },
   {
@@ -118,11 +155,17 @@ export const CADASTROS: CadastroConfig[] = [
     busca: ["codigo", "nome"],
     ordem: "nome",
     editores: ["producao", "estoque"],
-    campos: [codigo, nome, { nome: "hex", rotulo: "Cor de referência", tipo: "cor" }],
+    campos: [
+      codigo,
+      nome,
+      { nome: "familia", rotulo: "Família da cor", tipo: "opcoes", obrigatorio: true, opcoes: FAMILIAS_COR },
+      { nome: "hex", rotulo: "Cor de referência", tipo: "cor" },
+    ],
     colunas: [
       { chave: "codigo", titulo: "Código", valor: (r) => r.codigo },
       { chave: "nome", titulo: "Nome", valor: (r) => r.nome, principal: true },
-      { chave: "hex", titulo: "Referência", valor: (r) => t(r.hex) },
+      { chave: "familia", titulo: "Família", valor: (r) => FAMILIAS_COR.find((x) => x.value === r.familia)?.label ?? "—" },
+      { chave: "hex", titulo: "Referência", valor: (r) => t(r.hex), esconderCelular: true },
     ],
   },
   {
@@ -131,18 +174,18 @@ export const CADASTROS: CadastroConfig[] = [
     titulo: "Embalagens",
     singular: "embalagem",
     select: "*, unidades_medida(sigla)",
-    busca: ["codigo", "nome"],
-    ordem: "nome",
+    busca: ["nome"],
+    ordem: "volume_litros",
     editores: ["producao", "estoque"],
-    campos: [codigo, nome, { nome: "capacidade", rotulo: "Capacidade", tipo: "numero", min: 0 }, unidade],
+    campos: [
+      { ...nome, unico: true },
+      { nome: "volume_litros", rotulo: "Volume (litros)", tipo: "numero", obrigatorio: true, min: 0.001, dica: "Ex.: 1, 3,6 ou 18" },
+      { ...unidade, obrigatorio: true },
+    ],
     colunas: [
-      { chave: "codigo", titulo: "Código", valor: (r) => r.codigo },
       { chave: "nome", titulo: "Nome", valor: (r) => r.nome, principal: true },
-      {
-        chave: "cap",
-        titulo: "Capacidade",
-        valor: (r) => (r.capacidade != null ? `${Number(r.capacidade).toLocaleString("pt-BR")} ${rel(r, "unidades_medida", "sigla")}` : "—"),
-      },
+      { chave: "vol", titulo: "Volume", valor: (r) => (r.volume_litros != null ? `${num(r.volume_litros)} L` : "—") },
+      { chave: "un", titulo: "Unidade", valor: (r) => rel(r, "unidades_medida", "sigla") },
     ],
   },
   pessoa("clientes", "Clientes", "cliente", ["vendas"]),
