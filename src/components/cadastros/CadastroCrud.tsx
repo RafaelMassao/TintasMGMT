@@ -212,25 +212,35 @@ function Formulario({ config, registro, onClose }: { config: CadastroConfig; reg
     onError: (e: Error) => notify.error("Não foi possível salvar", traduzirErro(e.message)),
   });
 
-  function enviar() {
+  async function enviar() {
     const novosErros: Record<string, string> = {};
     const dados: Record<string, unknown> = {};
     for (const c of config.campos) {
       const v = (valores[c.nome] ?? "").trim();
       if (!v) {
         if (c.obrigatorio) novosErros[c.nome] = "Campo obrigatório";
-        dados[c.nome] = c.tipo === "numero" && c.nome === "estoque_minimo" ? 0 : null;
+        dados[c.nome] = null;
         continue;
       }
       if ("max" in c && c.max && v.length > c.max) novosErros[c.nome] = `Máximo de ${c.max} caracteres`;
       if (c.tipo === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) novosErros[c.nome] = "E-mail inválido";
       if (c.tipo === "numero") {
-        const n = Number(v.replace(",", "."));
-        if (Number.isNaN(n)) novosErros[c.nome] = "Informe um número";
-        else if (c.min !== undefined && n < c.min) novosErros[c.nome] = `Deve ser no mínimo ${c.min}`;
+        const n = Number(v.replace(/\./g, "").replace(",", ".").trim() === "" ? NaN : v.replace(",", "."));
+        if (!Number.isFinite(n)) novosErros[c.nome] = "Informe um número válido";
+        else if (c.min !== undefined && n < c.min) novosErros[c.nome] = c.min > 0 ? "Deve ser maior que zero" : "Não pode ser negativo";
         dados[c.nome] = n;
-      } else dados[c.nome] = c.tipo === "uf" ? v.toUpperCase() : v;
+      } else dados[c.nome] = c.tipo === "uf" || c.nome === "codigo" ? v.toUpperCase() : v;
     }
+    Object.assign(novosErros, config.validar?.(dados) ?? {});
+
+    // Impede duplicados (o banco também bloqueia)
+    for (const c of config.campos.filter((x) => x.unico && dados[x.nome] && !novosErros[x.nome])) {
+      let q = supabase.from(config.tabela).select("id", { count: "exact", head: true }).ilike(c.nome, String(dados[c.nome]).replace(/[%_\\]/g, "\\$&"));
+      if (registro) q = q.neq("id", registro.id);
+      const { count } = await q;
+      if (count) novosErros[c.nome] = `Já existe ${config.singular === "embalagem" ? "uma embalagem" : "um cadastro"} com este ${c.rotulo.toLowerCase()}`;
+    }
+
     setErros(novosErros);
     if (Object.keys(novosErros).length) {
       notify.warning("Verifique os campos destacados");
