@@ -10,9 +10,9 @@ export type Column<T> = {
   cell: (row: T) => ReactNode;
   className?: string;
   /** Oculta a coluna na visualização em cartões (celular) */
-  hideOnMobile?: boolean;
+  hideOnMobile?: boolean | undefined;
   /** Destaca como título do cartão no celular */
-  primary?: boolean;
+  primary?: boolean | undefined;
 };
 
 export function DataTable<T>({
@@ -30,9 +30,9 @@ export function DataTable<T>({
   getRowId: (row: T) => string;
   loading?: boolean;
   emptyTitle?: string;
-  emptyDescription?: string;
+  emptyDescription?: string | undefined;
   emptyAction?: ReactNode;
-  rowActions?: (row: T) => ReactNode;
+  rowActions?: ((row: T) => ReactNode) | undefined;
 }) {
   if (loading) return <TableSkeleton columns={Math.min(columns.length, 5)} />;
   if (rows.length === 0)
