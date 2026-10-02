@@ -23,7 +23,6 @@ import { Route as PainelEstoqueRouteImport } from './routes/_painel.estoque'
 import { Route as PainelManutencaoRouteImport } from './routes/_painel.manutencao'
 import { Route as PainelPedidosRouteImport } from './routes/_painel.pedidos'
 import { Route as PainelPerdasRouteImport } from './routes/_painel.perdas'
-import { Route as PainelProducaoRouteImport } from './routes/_painel.producao'
 import { Route as PainelRelatoriosRouteImport } from './routes/_painel.relatorios'
 import { Route as PainelSemAcessoRouteImport } from './routes/_painel.sem-acesso'
 
@@ -96,11 +95,6 @@ const PainelPerdasRoute = PainelPerdasRouteImport.update({
   path: '/perdas',
   getParentRoute: () => PainelRoute,
 } as any)
-const PainelProducaoRoute = PainelProducaoRouteImport.update({
-  id: '/producao',
-  path: '/producao',
-  getParentRoute: () => PainelRoute,
-} as any)
 const PainelRelatoriosRoute = PainelRelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -126,7 +120,6 @@ export interface FileRoutesByFullPath {
   '/manutencao': typeof PainelManutencaoRoute
   '/pedidos': typeof PainelPedidosRoute
   '/perdas': typeof PainelPerdasRoute
-  '/producao': typeof PainelProducaoRoute
   '/relatorios': typeof PainelRelatoriosRoute
   '/sem-acesso': typeof PainelSemAcessoRoute
 }
@@ -144,7 +137,6 @@ export interface FileRoutesByTo {
   '/manutencao': typeof PainelManutencaoRoute
   '/pedidos': typeof PainelPedidosRoute
   '/perdas': typeof PainelPerdasRoute
-  '/producao': typeof PainelProducaoRoute
   '/relatorios': typeof PainelRelatoriosRoute
   '/sem-acesso': typeof PainelSemAcessoRoute
 }
@@ -164,7 +156,6 @@ export interface FileRoutesById {
   '/_painel/manutencao': typeof PainelManutencaoRoute
   '/_painel/pedidos': typeof PainelPedidosRoute
   '/_painel/perdas': typeof PainelPerdasRoute
-  '/_painel/producao': typeof PainelProducaoRoute
   '/_painel/relatorios': typeof PainelRelatoriosRoute
   '/_painel/sem-acesso': typeof PainelSemAcessoRoute
 }
@@ -184,7 +175,6 @@ export interface FileRouteTypes {
     | '/manutencao'
     | '/pedidos'
     | '/perdas'
-    | '/producao'
     | '/relatorios'
     | '/sem-acesso'
   fileRoutesByTo: FileRoutesByTo
@@ -202,7 +192,6 @@ export interface FileRouteTypes {
     | '/manutencao'
     | '/pedidos'
     | '/perdas'
-    | '/producao'
     | '/relatorios'
     | '/sem-acesso'
   id:
@@ -221,7 +210,6 @@ export interface FileRouteTypes {
     | '/_painel/manutencao'
     | '/_painel/pedidos'
     | '/_painel/perdas'
-    | '/_painel/producao'
     | '/_painel/relatorios'
     | '/_painel/sem-acesso'
   fileRoutesById: FileRoutesById
@@ -335,13 +323,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelPerdasRouteImport
       parentRoute: typeof PainelRoute
     }
-    '/_painel/producao': {
-      id: '/_painel/producao'
-      path: '/producao'
-      fullPath: '/producao'
-      preLoaderRoute: typeof PainelProducaoRouteImport
-      parentRoute: typeof PainelRoute
-    }
     '/_painel/relatorios': {
       id: '/_painel/relatorios'
       path: '/relatorios'
@@ -368,7 +349,6 @@ interface PainelRouteChildren {
   PainelManutencaoRoute: typeof PainelManutencaoRoute
   PainelPedidosRoute: typeof PainelPedidosRoute
   PainelPerdasRoute: typeof PainelPerdasRoute
-  PainelProducaoRoute: typeof PainelProducaoRoute
   PainelRelatoriosRoute: typeof PainelRelatoriosRoute
   PainelSemAcessoRoute: typeof PainelSemAcessoRoute
 }
@@ -382,7 +362,6 @@ const PainelRouteChildren: PainelRouteChildren = {
   PainelManutencaoRoute: PainelManutencaoRoute,
   PainelPedidosRoute: PainelPedidosRoute,
   PainelPerdasRoute: PainelPerdasRoute,
-  PainelProducaoRoute: PainelProducaoRoute,
   PainelRelatoriosRoute: PainelRelatoriosRoute,
   PainelSemAcessoRoute: PainelSemAcessoRoute,
 }
