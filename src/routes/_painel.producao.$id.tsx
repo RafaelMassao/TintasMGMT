@@ -289,12 +289,12 @@ function ConcluirModal({
   const [qtd, setQtd] = useState(lote.quantidade_produzida ? String(lote.quantidade_produzida) : "");
   const [vol, setVol] = useState(lote.volume_produzido_litros ? String(lote.volume_produzido_litros) : "");
   const [status, setStatus] = useState<StatusLote>("concluido");
-  const [erro, setErro] = useState<Record<string, string>>({});
+  const [erro, setErro] = useState<{ qtd?: string; vol?: string }>({});
 
   function enviar() {
     const q = Number(qtd.replace(",", "."));
     const v = vol ? Number(vol.replace(",", ".")) : 0;
-    const e: Record<string, string> = {};
+    const e: { qtd?: string; vol?: string } = {};
     if (!qtd || Number.isNaN(q) || q <= 0) e.qtd = "Informe a quantidade produzida (maior que zero).";
     if (Number.isNaN(v) || v < 0) e.vol = "Volume inválido.";
     setErro(e);
@@ -327,7 +327,7 @@ function Observacoes({ loteId, itens, loading, podeRegistrar }: { loteId: string
   const salvar = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
-      const nome = (u.user?.user_metadata?.nome as string | undefined) ?? u.user?.email ?? null;
+      const nome = (u.user?.user_metadata?.["nome"] as string | undefined) ?? u.user?.email ?? null;
       const { error } = await supabase.from("lote_observacoes").insert({ lote_id: loteId, texto: texto.trim(), autor_id: u.user?.id, autor_nome: nome });
       if (error) throw error;
     },
@@ -346,7 +346,7 @@ function Observacoes({ loteId, itens, loading, podeRegistrar }: { loteId: string
           className="mb-4 space-y-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!texto.trim()) return notify.warning("Escreva a observação antes de registrar.");
+            if (!texto.trim()) { notify.warning("Escreva a observação antes de registrar."); return; }
             salvar.mutate();
           }}
         >
