@@ -11,7 +11,8 @@ import { type Lote, opcoesProducao, traduzirErroProducao } from "@/lib/producao"
 export const selectClass =
   "flex h-9 w-full rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
-type Valores = Record<string, string>;
+type Chave = "numero_lote" | "produto_id" | "tanque_id" | "quantidade_planejada" | "volume_planejado_litros" | "quantidade_produzida" | "volume_produzido_litros" | "data_planejada" | "observacoes";
+type Valores = Record<Chave, string>;
 
 export function LoteForm({
   lote,
@@ -37,8 +38,8 @@ export function LoteForm({
     data_planejada: lote?.data_planejada ?? "",
     observacoes: lote?.observacoes ?? "",
   }));
-  const [erros, setErros] = useState<Valores>({});
-  const set = (k: string) => (e: { target: { value: string } }) => setV((s) => ({ ...s, [k]: e.target.value }));
+  const [erros, setErros] = useState<Partial<Valores>>({});
+  const set = (k: Chave) => (e: { target: { value: string } }) => setV((s) => ({ ...s, [k]: e.target.value }));
 
   const salvar = useMutation({
     mutationFn: async (dados: Record<string, unknown>) => {
@@ -67,10 +68,10 @@ export function LoteForm({
   });
 
   function enviar() {
-    const e: Valores = {};
+    const e: Partial<Valores> = {};
     if (!v.numero_lote.trim()) e.numero_lote = "Informe o número do lote.";
     if (!v.produto_id) e.produto_id = "Escolha o produto.";
-    const n = (k: string, obrig: boolean) => {
+    const n = (k: Chave, obrig: boolean) => {
       const raw = (v[k] ?? "").replace(",", ".");
       if (!raw) {
         if (obrig) e[k] = "Campo obrigatório.";
