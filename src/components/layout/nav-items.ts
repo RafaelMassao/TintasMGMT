@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   Factory,
   ClipboardList,
+  Package,
   Boxes,
   ShoppingCart,
   TriangleAlert,
@@ -16,6 +17,7 @@ export type NavItem = {
   to:
     | "/dashboard"
     | "/producao"
+    | "/envase"
     | "/pedidos"
     | "/estoque"
     | "/compras"
@@ -33,6 +35,7 @@ export type NavItem = {
 export const navItems: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, mobile: true },
   { to: "/producao", label: "Produção", icon: Factory, mobile: true },
+  { to: "/envase", label: "Envase", icon: Package, mobile: true },
   { to: "/pedidos", label: "Pedidos", icon: ClipboardList, mobile: true },
   { to: "/estoque", label: "Estoque", icon: Boxes, mobile: true },
   { to: "/compras", label: "Compras", icon: ShoppingCart },
