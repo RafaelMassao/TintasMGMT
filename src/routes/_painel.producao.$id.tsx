@@ -202,6 +202,7 @@ function LoteDetalhe() {
                   <span className="font-medium">{e.embalagens?.nome ?? "—"}</span>
                   <span className="text-muted-foreground">
                     Planej. {fmtNum(e.quantidade_planejada)} · Aprov. {fmtNum(e.quantidade_aprovada)} · Rejeit. {fmtNum(e.quantidade_rejeitada)}
+                    {e.operador?.nome ? ` · ${e.operador.nome}` : ""}
                   </span>
                 </li>
               ))}
