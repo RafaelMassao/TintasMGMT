@@ -99,7 +99,7 @@ function EnvasePage() {
         <EmptyState title="Não foi possível carregar os envases" description={traduzirErroEnvase(envases.error.message)} />
       ) : filtrados.length === 0 ? (
         <EmptyState
-          icon={<Package className="h-8 w-8" />}
+          icon={Package}
           title={busca ? "Nenhum envase encontrado" : "Nenhum envase registrado"}
           description={busca ? "Tente outra busca." : "Registre o primeiro envase de um lote aguardando envase."}
           action={podeOperar && !busca ? <Button onClick={() => setNovo(true)}>Registrar envase</Button> : undefined}
