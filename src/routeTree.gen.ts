@@ -19,6 +19,7 @@ import { Route as PainelCadastrosRouteImport } from './routes/_painel.cadastros'
 import { Route as PainelComprasRouteImport } from './routes/_painel.compras'
 import { Route as PainelConfiguracoesRouteImport } from './routes/_painel.configuracoes'
 import { Route as PainelDashboardRouteImport } from './routes/_painel.dashboard'
+import { Route as PainelEnvaseRouteImport } from './routes/_painel.envase'
 import { Route as PainelEstoqueRouteImport } from './routes/_painel.estoque'
 import { Route as PainelManutencaoRouteImport } from './routes/_painel.manutencao'
 import { Route as PainelPedidosRouteImport } from './routes/_painel.pedidos'
@@ -77,6 +78,11 @@ const PainelDashboardRoute = PainelDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => PainelRoute,
 } as any)
+const PainelEnvaseRoute = PainelEnvaseRouteImport.update({
+  id: '/envase',
+  path: '/envase',
+  getParentRoute: () => PainelRoute,
+} as any)
 const PainelEstoqueRoute = PainelEstoqueRouteImport.update({
   id: '/estoque',
   path: '/estoque',
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/compras': typeof PainelComprasRoute
   '/configuracoes': typeof PainelConfiguracoesRoute
   '/dashboard': typeof PainelDashboardRoute
+  '/envase': typeof PainelEnvaseRoute
   '/estoque': typeof PainelEstoqueRoute
   '/manutencao': typeof PainelManutencaoRoute
   '/pedidos': typeof PainelPedidosRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByTo {
   '/compras': typeof PainelComprasRoute
   '/configuracoes': typeof PainelConfiguracoesRoute
   '/dashboard': typeof PainelDashboardRoute
+  '/envase': typeof PainelEnvaseRoute
   '/estoque': typeof PainelEstoqueRoute
   '/manutencao': typeof PainelManutencaoRoute
   '/pedidos': typeof PainelPedidosRoute
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/_painel/compras': typeof PainelComprasRoute
   '/_painel/configuracoes': typeof PainelConfiguracoesRoute
   '/_painel/dashboard': typeof PainelDashboardRoute
+  '/_painel/envase': typeof PainelEnvaseRoute
   '/_painel/estoque': typeof PainelEstoqueRoute
   '/_painel/manutencao': typeof PainelManutencaoRoute
   '/_painel/pedidos': typeof PainelPedidosRoute
@@ -189,6 +198,7 @@ export interface FileRouteTypes {
     | '/compras'
     | '/configuracoes'
     | '/dashboard'
+    | '/envase'
     | '/estoque'
     | '/manutencao'
     | '/pedidos'
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | '/compras'
     | '/configuracoes'
     | '/dashboard'
+    | '/envase'
     | '/estoque'
     | '/manutencao'
     | '/pedidos'
@@ -228,6 +239,7 @@ export interface FileRouteTypes {
     | '/_painel/compras'
     | '/_painel/configuracoes'
     | '/_painel/dashboard'
+    | '/_painel/envase'
     | '/_painel/estoque'
     | '/_painel/manutencao'
     | '/_painel/pedidos'
@@ -319,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelDashboardRouteImport
       parentRoute: typeof PainelRoute
     }
+    '/_painel/envase': {
+      id: '/_painel/envase'
+      path: '/envase'
+      fullPath: '/envase'
+      preLoaderRoute: typeof PainelEnvaseRouteImport
+      parentRoute: typeof PainelRoute
+    }
     '/_painel/estoque': {
       id: '/_painel/estoque'
       path: '/estoque'
@@ -383,6 +402,7 @@ interface PainelRouteChildren {
   PainelComprasRoute: typeof PainelComprasRoute
   PainelConfiguracoesRoute: typeof PainelConfiguracoesRoute
   PainelDashboardRoute: typeof PainelDashboardRoute
+  PainelEnvaseRoute: typeof PainelEnvaseRoute
   PainelEstoqueRoute: typeof PainelEstoqueRoute
   PainelManutencaoRoute: typeof PainelManutencaoRoute
   PainelPedidosRoute: typeof PainelPedidosRoute
@@ -398,6 +418,7 @@ const PainelRouteChildren: PainelRouteChildren = {
   PainelComprasRoute: PainelComprasRoute,
   PainelConfiguracoesRoute: PainelConfiguracoesRoute,
   PainelDashboardRoute: PainelDashboardRoute,
+  PainelEnvaseRoute: PainelEnvaseRoute,
   PainelEstoqueRoute: PainelEstoqueRoute,
   PainelManutencaoRoute: PainelManutencaoRoute,
   PainelPedidosRoute: PainelPedidosRoute,
