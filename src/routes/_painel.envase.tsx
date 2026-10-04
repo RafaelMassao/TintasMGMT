@@ -282,15 +282,14 @@ function EnvaseForm({ open, onOpenChange }: { open: boolean; onOpenChange: (o: b
         </FormField>
       </FormModal>
 
-      {confirmacao != null && (
-        <ConfirmDialog
-          trigger={<span className="hidden" />}
-          title="Confirmar registro do envase?"
-          description={confirmacao}
-          confirmLabel="Salvar envase"
-          onConfirm={() => salvar.mutateAsync().then(() => setConfirmacao(null))}
-        />
-      )}
+      <ConfirmDialog
+        open={confirmacao != null}
+        onOpenChange={(o) => !o && setConfirmacao(null)}
+        title="Confirmar registro do envase?"
+        description={confirmacao ?? ""}
+        confirmLabel="Salvar envase"
+        onConfirm={() => salvar.mutateAsync().then(() => setConfirmacao(null))}
+      />
     </>
   );
 }

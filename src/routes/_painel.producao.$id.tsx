@@ -77,7 +77,7 @@ function LoteDetalhe() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("envases")
-        .select("id, quantidade_planejada, quantidade_aprovada, quantidade_rejeitada, inicio_envase, fim_envase, embalagens(nome)")
+        .select("id, quantidade_planejada, quantidade_aprovada, quantidade_rejeitada, inicio_envase, fim_envase, embalagens(nome), operador:profiles!envases_operador_id_fkey(nome)")
         .eq("lote_id", id)
         .order("criado_em");
       if (error) throw error;
