@@ -186,7 +186,7 @@ export function CadastroCrud({ config, podeEditar }: { config: CadastroConfig; p
 
 function valorInicial(c: Campo, r: Registro | null) {
   const v = r?.[c.nome];
-  return v === null || v === undefined ? "" : String(v);
+  return v === null || v === undefined ? c.valorPadrao ?? "" : String(v);
 }
 
 function Formulario({ config, registro, onClose }: { config: CadastroConfig; registro: Registro | null; onClose: () => void }) {
