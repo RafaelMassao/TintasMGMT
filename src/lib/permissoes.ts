@@ -1,4 +1,11 @@
-export const PERFIS = ["administrador", "gestor", "producao", "estoque", "vendas", "manutencao"] as const;
+export const PERFIS = [
+  "administrador",
+  "gestor",
+  "producao",
+  "estoque",
+  "vendas",
+  "manutencao",
+] as const;
 export type Perfil = (typeof PERFIS)[number];
 
 export const PERFIL_LABEL: Record<Perfil, string> = {
@@ -19,6 +26,7 @@ const ACESSO: Record<string, Perfil[]> = {
   "/estoque": ["estoque", "vendas"], // vendas: só consulta
   "/compras": ["estoque"],
   "/pedidos": ["vendas"],
+  "/atrasos": ["producao", "vendas", "estoque", "manutencao"],
   "/manutencao": ["manutencao"], // equipamentos, manutenções e paradas
   "/cadastros": ["vendas", "manutencao", "estoque", "producao"], // leitura para todos; edição conforme o cadastro
   "/relatorios": [],
@@ -34,4 +42,5 @@ export function podeAcessar(perfis: Perfil[], caminho: string): boolean {
   return perfis.some((p) => ACESSO[chave]!.includes(p));
 }
 
-export const podeAprovar = (perfis: Perfil[]) => perfis.includes("administrador") || perfis.includes("gestor");
+export const podeAprovar = (perfis: Perfil[]) =>
+  perfis.includes("administrador") || perfis.includes("gestor");

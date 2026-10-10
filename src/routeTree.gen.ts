@@ -15,6 +15,7 @@ import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
+import { Route as PainelAtrasosRouteImport } from './routes/_painel.atrasos'
 import { Route as PainelCadastrosRouteImport } from './routes/_painel.cadastros'
 import { Route as PainelComprasRouteImport } from './routes/_painel.compras'
 import { Route as PainelConfiguracoesRouteImport } from './routes/_painel.configuracoes'
@@ -58,6 +59,11 @@ const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
   id: '/redefinir-senha',
   path: '/redefinir-senha',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PainelAtrasosRoute = PainelAtrasosRouteImport.update({
+  id: '/atrasos',
+  path: '/atrasos',
+  getParentRoute: () => PainelRoute,
 } as any)
 const PainelCadastrosRoute = PainelCadastrosRouteImport.update({
   id: '/cadastros',
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/atrasos': typeof PainelAtrasosRoute
   '/cadastros': typeof PainelCadastrosRoute
   '/compras': typeof PainelComprasRoute
   '/configuracoes': typeof PainelConfiguracoesRoute
@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/atrasos': typeof PainelAtrasosRoute
   '/cadastros': typeof PainelCadastrosRoute
   '/compras': typeof PainelComprasRoute
   '/configuracoes': typeof PainelConfiguracoesRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
+  '/_painel/atrasos': typeof PainelAtrasosRoute
   '/_painel/cadastros': typeof PainelCadastrosRoute
   '/_painel/compras': typeof PainelComprasRoute
   '/_painel/configuracoes': typeof PainelConfiguracoesRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/redefinir-senha'
+    | '/atrasos'
     | '/cadastros'
     | '/compras'
     | '/configuracoes'
@@ -224,6 +234,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/redefinir-senha'
+    | '/atrasos'
     | '/cadastros'
     | '/compras'
     | '/configuracoes'
@@ -246,6 +257,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recuperar-senha'
     | '/redefinir-senha'
+    | '/_painel/atrasos'
     | '/_painel/cadastros'
     | '/_painel/compras'
     | '/_painel/configuracoes'
@@ -314,6 +326,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/redefinir-senha'
       preLoaderRoute: typeof RedefinirSenhaRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_painel/atrasos': {
+      id: '/_painel/atrasos'
+      path: '/atrasos'
+      fullPath: '/atrasos'
+      preLoaderRoute: typeof PainelAtrasosRouteImport
+      parentRoute: typeof PainelRoute
     }
     '/_painel/cadastros': {
       id: '/_painel/cadastros'
@@ -417,6 +436,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface PainelRouteChildren {
+  PainelAtrasosRoute: typeof PainelAtrasosRoute
   PainelCadastrosRoute: typeof PainelCadastrosRoute
   PainelComprasRoute: typeof PainelComprasRoute
   PainelConfiguracoesRoute: typeof PainelConfiguracoesRoute
@@ -434,6 +454,7 @@ interface PainelRouteChildren {
 }
 
 const PainelRouteChildren: PainelRouteChildren = {
+  PainelAtrasosRoute: PainelAtrasosRoute,
   PainelCadastrosRoute: PainelCadastrosRoute,
   PainelComprasRoute: PainelComprasRoute,
   PainelConfiguracoesRoute: PainelConfiguracoesRoute,
