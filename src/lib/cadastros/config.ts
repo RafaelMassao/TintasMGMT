@@ -1,6 +1,6 @@
 import type { Perfil } from "@/lib/permissoes";
 
-type Base = { nome: string; rotulo: string; obrigatorio?: boolean; unico?: boolean; dica?: string };
+type Base = { nome: string; rotulo: string; obrigatorio?: boolean; unico?: boolean; dica?: string; valorPadrao?: string };
 export type Campo = Base &
   (
     | { tipo: "texto" | "textarea" | "email" | "cor"; max?: number }
@@ -70,7 +70,13 @@ const codigo: Campo = { nome: "codigo", rotulo: "Código", tipo: "texto", obriga
 const nome: Campo = { nome: "nome", rotulo: "Nome", tipo: "texto", obrigatorio: true, max: 150 };
 const unidade: Campo = { nome: "unidade_medida_id", rotulo: "Unidade de medida", tipo: "referencia", tabela: "unidades_medida", rotuloColunas: ["sigla", "nome"] };
 
-const pessoa = (tabela: string, titulo: string, singular: string, editores: Perfil[]): CadastroConfig => ({
+const pessoa = (
+  tabela: string,
+  titulo: string,
+  singular: string,
+  editores: Perfil[],
+  extras: { campos?: Campo[]; colunas?: Coluna[] } = {},
+): CadastroConfig => ({
   slug: tabela,
   tabela,
   titulo,
@@ -86,12 +92,14 @@ const pessoa = (tabela: string, titulo: string, singular: string, editores: Perf
     { nome: "telefone", rotulo: "Telefone", tipo: "texto", max: 20 },
     { nome: "cidade", rotulo: "Cidade", tipo: "texto", max: 100 },
     { nome: "uf", rotulo: "UF", tipo: "uf" },
+    ...(extras.campos ?? []),
   ],
   colunas: [
     { chave: "nome", titulo: "Nome", valor: (r) => r.nome, principal: true },
     { chave: "documento", titulo: "CPF/CNPJ", valor: (r) => t(r.documento) },
     { chave: "telefone", titulo: "Telefone", valor: (r) => t(r.telefone), esconderCelular: true },
     { chave: "cidade", titulo: "Cidade", valor: (r) => (r.cidade ? `${r.cidade}${r.uf ? "/" + r.uf : ""}` : "—") },
+    ...(extras.colunas ?? []),
   ],
 });
 
@@ -189,7 +197,22 @@ export const CADASTROS: CadastroConfig[] = [
     ],
   },
   pessoa("clientes", "Clientes", "cliente", ["vendas"]),
-  pessoa("fornecedores", "Fornecedores", "fornecedor", ["estoque"]),
+  pessoa("fornecedores", "Fornecedores", "fornecedor", ["estoque"], {
+    campos: [
+      {
+        nome: "prazo_entrega_dias",
+        rotulo: "Prazo médio de entrega (dias)",
+        tipo: "numero",
+        obrigatorio: true,
+        min: 0,
+        valorPadrao: "7",
+        dica: "Usado para calcular o ponto de reposição sugerido.",
+      },
+    ],
+    colunas: [
+      { chave: "prazo", titulo: "Prazo médio", valor: (r) => `${num(r.prazo_entrega_dias ?? 7)} dias`, esconderCelular: true },
+    ],
+  }),
   {
     slug: "materiais",
     tabela: "materiais",
