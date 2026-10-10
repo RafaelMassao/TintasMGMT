@@ -58,8 +58,8 @@ CREATE INDEX IF NOT EXISTS estoque_mov_embalagem_idx
   WHERE embalagem_id IS NOT NULL;
 
 -- Saldo calculado sob demanda, sem duplicar saldo em uma tabela.
--- embalagem_id é acrescentado no fim para preservar a ordem/compatibilidade
--- das colunas já existentes da view.
+-- Mantém produto_id, material_id, saldo, total_movimentacoes e
+-- ultima_movimentacao nas posições atuais; os campos novos vêm ao final.
 CREATE OR REPLACE VIEW public.v_estoque_saldo AS
 WITH saldos AS (
   SELECT
@@ -82,37 +82,37 @@ WITH saldos AS (
   GROUP BY material_id, produto_id, embalagem_id
 )
 SELECT
-  p.id AS item_id,
-  'produto'::text AS tipo_item,
   p.id AS produto_id,
   NULL::uuid AS material_id,
   COALESCE(s.saldo, 0::numeric) AS saldo,
   COALESCE(s.total_movimentacoes, 0::bigint) AS total_movimentacoes,
   s.ultima_movimentacao,
+  p.id AS item_id,
+  'produto'::text AS tipo_item,
   NULL::uuid AS embalagem_id
 FROM public.produtos p
 LEFT JOIN saldos s ON s.produto_id = p.id
 UNION ALL
 SELECT
-  m.id AS item_id,
-  'material'::text AS tipo_item,
   NULL::uuid AS produto_id,
   m.id AS material_id,
   COALESCE(s.saldo, 0::numeric) AS saldo,
   COALESCE(s.total_movimentacoes, 0::bigint) AS total_movimentacoes,
   s.ultima_movimentacao,
+  m.id AS item_id,
+  'material'::text AS tipo_item,
   NULL::uuid AS embalagem_id
 FROM public.materiais m
 LEFT JOIN saldos s ON s.material_id = m.id
 UNION ALL
 SELECT
-  e.id AS item_id,
-  'embalagem'::text AS tipo_item,
   NULL::uuid AS produto_id,
   NULL::uuid AS material_id,
   COALESCE(s.saldo, 0::numeric) AS saldo,
   COALESCE(s.total_movimentacoes, 0::bigint) AS total_movimentacoes,
   s.ultima_movimentacao,
+  e.id AS item_id,
+  'embalagem'::text AS tipo_item,
   e.id AS embalagem_id
 FROM public.embalagens e
 LEFT JOIN saldos s ON s.embalagem_id = e.id;
