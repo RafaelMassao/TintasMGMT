@@ -6,6 +6,7 @@ import {
   Boxes,
   ShoppingCart,
   TriangleAlert,
+  Clock3,
   Wrench,
   FileBarChart,
   FolderCog,
@@ -22,6 +23,7 @@ export type NavItem = {
     | "/estoque"
     | "/compras"
     | "/perdas"
+    | "/atrasos"
     | "/manutencao"
     | "/relatorios"
     | "/cadastros"
@@ -40,6 +42,7 @@ export const navItems: NavItem[] = [
   { to: "/estoque", label: "Estoque", icon: Boxes, mobile: true },
   { to: "/compras", label: "Compras", icon: ShoppingCart },
   { to: "/perdas", label: "Perdas", icon: TriangleAlert },
+  { to: "/atrasos", label: "Atrasos e Ocorrências", icon: Clock3 },
   { to: "/manutencao", label: "Manutenção", icon: Wrench },
   { to: "/relatorios", label: "Relatórios", icon: FileBarChart },
   { to: "/cadastros", label: "Cadastros", icon: FolderCog },
