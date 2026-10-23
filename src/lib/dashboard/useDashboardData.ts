@@ -61,6 +61,7 @@ type ItemPedido = {
   produto_id: string;
   quantidade_solicitada: number | string;
   quantidade_entregue: number | string;
+  preco_unitario: number | string;
 };
 type Saldo = {
   item_id: string;
@@ -276,7 +277,7 @@ export function useDashboardData({
       if (!ids.length) return { pedidos: [], itens: [] as ItemPedido[] };
       const itensR = await supabase
         .from("itens_pedido")
-        .select("id,pedido_id,produto_id,quantidade_solicitada,quantidade_entregue")
+        .select("id,pedido_id,produto_id,quantidade_solicitada,quantidade_entregue,preco_unitario")
         .in("pedido_id", ids)
         .limit(10000);
       if (itensR.error) throw itensR.error;
@@ -358,7 +359,9 @@ export function useDashboardData({
         pedidoIds.length
           ? supabase
               .from("itens_pedido")
-              .select("id,pedido_id,produto_id,quantidade_solicitada,quantidade_entregue")
+              .select(
+                "id,pedido_id,produto_id,quantidade_solicitada,quantidade_entregue,preco_unitario",
+              )
               .in("pedido_id", pedidoIds)
               .limit(10000)
           : Promise.resolve({ data: [], error: null }),

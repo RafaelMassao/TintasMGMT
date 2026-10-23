@@ -554,27 +554,123 @@ function DashboardPage() {
     ? somaPeriodo(periodRecords, periodoDe, periodoAte)
     : [];
 
-  const vendasPorEmbalagem = somarPor(
-    itensVendasPeriodo,
-    (item) => {
-      const produto = produtoPorId.get(item.produto_id);
-      const embalagem = produto?.embalagem_id
-        ? embalagemPorId.get(produto.embalagem_id)
-        : undefined;
-      if (!embalagem) return "Sem embalagem vinculada";
-      const volume = numero(embalagem.volume_litros ?? embalagem.capacidade);
-      return volume > 0 ? `${embalagem.nome} (${formatarNumero(volume, 2)} L)` : embalagem.nome;
-    },
-    (item) => numero(item.quantidade_entregue),
+  const embalagemDemanda = new Map<string, { nome: string; unidades: number; litros: number }>();
+  const corDemanda = new Map<
+    string,
+    { nome: string; unidades: number; litros: number; receita: number }
+  >();
+  for (const item of itensVendasPeriodo) {
+    const produto = produtoPorId.get(item.produto_id);
+    const embalagem = produto?.embalagem_id ? embalagemPorId.get(produto.embalagem_id) : undefined;
+    const capacidade = numero(embalagem?.volume_litros ?? embalagem?.capacidade);
+    const rotuloEmbalagem = !embalagem
+      ? "Sem embalagem vinculada"
+      : capacidade > 0
+        ? `${embalagem.nome} (${formatarNumero(capacidade, 2)} L)`
+        : embalagem.nome;
+    const embalagemKey = embalagem?.id ?? "sem_embalagem";
+    const embalagemAtual = embalagemDemanda.get(embalagemKey) ?? {
+      nome: rotuloEmbalagem,
+      unidades: 0,
+      litros: 0,
+    };
+    const quantidade = numero(item.quantidade_entregue);
+    const fatorLitros = produto ? litrosPorUnidade(produto, unidadePorId, embalagemPorId) : null;
+    embalagemAtual.unidades += quantidade;
+    if (fatorLitros !== null) embalagemAtual.litros += quantidade * fatorLitros;
+    embalagemDemanda.set(embalagemKey, embalagemAtual);
+
+    const corId = produto?.cor_id ?? "sem_cor";
+    const nomeCor =
+      (produto?.cor_id ? corPorId.get(produto.cor_id)?.nome : null) ?? "Sem cor definida";
+    const corAtual = corDemanda.get(corId) ?? {
+      nome: nomeCor,
+      unidades: 0,
+      litros: 0,
+      receita: 0,
+    };
+    corAtual.unidades += quantidade;
+    if (fatorLitros !== null) corAtual.litros += quantidade * fatorLitros;
+    corAtual.receita += quantidade * numero(item.preco_unitario);
+    corDemanda.set(corId, corAtual);
+  }
+  const vendasPorEmbalagemUnidades = [...embalagemDemanda.values()]
+    .map(({ nome, unidades }) => ({ nome, valor: unidades }))
+    .sort((a, b) => b.valor - a.valor);
+  const vendasPorEmbalagemLitros = [...embalagemDemanda.values()]
+    .map(({ nome, litros }) => ({ nome, valor: litros }))
+    .sort((a, b) => b.valor - a.valor);
+  const totalUnidadesPorCor = [...corDemanda.values()].reduce(
+    (total, cor) => total + cor.unidades,
+    0,
   );
-  const vendasPorCor = somarPor(
-    itensVendasPeriodo,
-    (item) => {
-      const produto = produtoPorId.get(item.produto_id);
-      return (produto?.cor_id ? corPorId.get(produto.cor_id)?.nome : null) ?? "Sem cor definida";
-    },
-    (item) => numero(item.quantidade_entregue),
+  const totalLitrosPorCor = [...corDemanda.values()].reduce((total, cor) => total + cor.litros, 0);
+  const totalReceitaPorCor = [...corDemanda.values()].reduce(
+    (total, cor) => total + cor.receita,
+    0,
   );
+  const analisePorCor = [...corDemanda.entries()]
+    .map(([id, cor]) => ({
+      id,
+      ...cor,
+      participacaoUnidades:
+        totalUnidadesPorCor > 0 ? (cor.unidades / totalUnidadesPorCor) * 100 : null,
+      participacaoLitros: totalLitrosPorCor > 0 ? (cor.litros / totalLitrosPorCor) * 100 : null,
+      participacaoReceita: totalReceitaPorCor > 0 ? (cor.receita / totalReceitaPorCor) * 100 : null,
+    }))
+    .sort((a, b) => b.unidades - a.unidades);
+
+  const evolucaoPorCor = (metrica: "unidades" | "litros") => {
+    const coresPrincipais = [...analisePorCor].sort((a, b) => b[metrica] - a[metrica]).slice(0, 5);
+    const coresSelecionadas = new Map(
+      coresPrincipais.map((cor, indice) => [cor.id, `cor_${indice}`]),
+    );
+    const outrasCores = analisePorCor.length > coresPrincipais.length;
+    const series = [
+      ...coresPrincipais.map((cor, indice) => ({
+        key: `cor_${indice}`,
+        label: cor.nome,
+        color: `var(--chart-${(indice % 5) + 1})`,
+      })),
+      ...(outrasCores
+        ? [{ key: "outras", label: "Outras cores", color: "var(--muted-foreground)" }]
+        : []),
+    ];
+    const modo = modoPeriodo(periodoDe, periodoAte);
+    const grupos = new Map<string, Record<string, number | string>>();
+    for (const item of itensVendasPeriodo) {
+      const pedido = pedidos.find((row) => row.id === item.pedido_id);
+      const produto = produtoPorId.get(item.produto_id);
+      if (!pedido?.data_entrega) continue;
+      const corId = produto?.cor_id ?? "sem_cor";
+      const chaveSerie = coresSelecionadas.get(corId) ?? (outrasCores ? "outras" : null);
+      if (!chaveSerie) continue;
+      const fator = produto ? litrosPorUnidade(produto, unidadePorId, embalagemPorId) : null;
+      const valor =
+        metrica === "unidades"
+          ? numero(item.quantidade_entregue)
+          : fator === null
+            ? 0
+            : numero(item.quantidade_entregue) * fator;
+      if (valor <= 0) continue;
+      const data = dataDoCampo(pedido.data_entrega);
+      const chavePeriodoItem = chavePeriodo(data, modo);
+      const grupo = grupos.get(chavePeriodoItem) ?? {
+        periodo: rotuloPeriodo(chavePeriodoItem, modo),
+        ...Object.fromEntries(series.map((serie) => [serie.key, 0])),
+      };
+      grupo[chaveSerie] = numero(grupo[chaveSerie]) + valor;
+      grupos.set(chavePeriodoItem, grupo);
+    }
+    return {
+      data: [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, grupo]) => grupo),
+      series,
+    };
+  };
+  const evolucaoUnidadesPorCor = periodoValido
+    ? evolucaoPorCor("unidades")
+    : { data: [], series: [] };
+  const evolucaoLitrosPorCor = periodoValido ? evolucaoPorCor("litros") : { data: [], series: [] };
 
   const statusOptions = [
     ...(podeProducao ? STATUS_LOTE.map((item) => ({ ...item, value: `lote:${item.value}` })) : []),
@@ -858,6 +954,185 @@ function DashboardPage() {
         )}
       </div>
 
+      {podeVendas && (
+        <section
+          className="space-y-4 rounded-lg border bg-card p-4"
+          aria-label="Análise de demanda"
+        >
+          <div>
+            <h2 className="font-display text-base font-semibold">Análise de demanda</h2>
+            <p className="text-sm text-muted-foreground">
+              Embalagens mais vendidas e cores mais requisitadas com base nas quantidades
+              efetivamente entregues no período e nos filtros selecionados.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold">Ranking por tamanho de embalagem</h3>
+              <p className="text-xs text-muted-foreground">
+                Unidades vendidas e litros vendidos são métricas diferentes; cada gráfico tem sua
+                própria escala.
+              </p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <DashboardChartFrame
+                title="Embalagens por unidades vendidas"
+                subtitle="Ranking por quantidade de unidades entregues."
+                loading={carregandoVendas}
+                error={erroVendas}
+                hasData={vendasPorEmbalagemUnidades.some((item) => item.valor > 0)}
+              >
+                <SimpleBarChart
+                  data={vendasPorEmbalagemUnidades}
+                  xKey="nome"
+                  series={[{ key: "valor", label: "Unidades vendidas", color: "var(--chart-1)" }]}
+                />
+              </DashboardChartFrame>
+              <DashboardChartFrame
+                title="Embalagens por volume vendido"
+                subtitle="Ranking pelo volume convertido em litros; itens sem conversão não são somados."
+                loading={carregandoVendas}
+                error={erroVendas}
+                hasData={vendasPorEmbalagemLitros.some((item) => item.valor > 0)}
+              >
+                <SimpleBarChart
+                  data={vendasPorEmbalagemLitros}
+                  xKey="nome"
+                  series={[{ key: "valor", label: "Litros vendidos", color: "var(--chart-2)" }]}
+                />
+              </DashboardChartFrame>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold">Cores mais requisitadas</h3>
+              <p className="text-xs text-muted-foreground">
+                Unidades e litros aparecem em gráficos separados. A receita é estimada pela
+                quantidade entregue multiplicada pelo preço unitário registrado no item do pedido.
+              </p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <DashboardChartFrame
+                title="Unidades vendidas por cor"
+                subtitle="Quantidade de unidades entregues, sem conversão para litros."
+                loading={carregandoVendas}
+                error={erroVendas}
+                hasData={analisePorCor.some((cor) => cor.unidades > 0)}
+              >
+                <SimpleBarChart
+                  data={analisePorCor.map((cor) => ({ nome: cor.nome, valor: cor.unidades }))}
+                  xKey="nome"
+                  series={[{ key: "valor", label: "Unidades vendidas", color: "var(--chart-3)" }]}
+                />
+              </DashboardChartFrame>
+              <DashboardChartFrame
+                title="Litros vendidos por cor"
+                subtitle="Volume convertido pela capacidade da embalagem ou pela unidade de medida em litros."
+                loading={carregandoVendas}
+                error={erroVendas}
+                hasData={analisePorCor.some((cor) => cor.litros > 0)}
+              >
+                <SimpleBarChart
+                  data={analisePorCor.map((cor) => ({ nome: cor.nome, valor: cor.litros }))}
+                  xKey="nome"
+                  series={[{ key: "valor", label: "Litros vendidos", color: "var(--chart-4)" }]}
+                />
+              </DashboardChartFrame>
+              <DashboardChartFrame
+                title="Evolução de unidades entregues por cor"
+                subtitle="Até cinco cores principais por unidades, agrupadas por dia, semana ou mês conforme o período."
+                loading={carregandoVendas}
+                error={erroVendas}
+                hasData={evolucaoUnidadesPorCor.data.length > 0}
+              >
+                <SimpleLineChart
+                  data={evolucaoUnidadesPorCor.data}
+                  xKey="periodo"
+                  series={evolucaoUnidadesPorCor.series}
+                />
+              </DashboardChartFrame>
+              <DashboardChartFrame
+                title="Evolução de litros entregues por cor"
+                subtitle="Volume convertido; até cinco cores principais por litros, agrupadas pelo período selecionado."
+                loading={carregandoVendas}
+                error={erroVendas}
+                hasData={evolucaoLitrosPorCor.data.length > 0}
+              >
+                <SimpleLineChart
+                  data={evolucaoLitrosPorCor.data}
+                  xKey="periodo"
+                  series={evolucaoLitrosPorCor.series}
+                />
+              </DashboardChartFrame>
+              <DashboardChartFrame
+                title="Participação e receita por cor"
+                subtitle="Percentuais calculados sobre os totais exibidos; litros consideram apenas linhas convertidas."
+                loading={carregandoVendas}
+                error={erroVendas}
+                hasData={analisePorCor.length > 0}
+              >
+                <div className="h-full overflow-auto">
+                  <table className="w-full min-w-[760px] text-left text-xs">
+                    <thead className="sticky top-0 bg-card text-muted-foreground">
+                      <tr>
+                        <th className="px-2 py-2 font-medium">Cor</th>
+                        <th className="px-2 py-2 text-right font-medium">Unidades</th>
+                        <th className="px-2 py-2 text-right font-medium">Participação unidades</th>
+                        <th className="px-2 py-2 text-right font-medium">Litros</th>
+                        <th className="px-2 py-2 text-right font-medium">Participação litros</th>
+                        <th className="px-2 py-2 text-right font-medium">Receita estimada</th>
+                        <th className="px-2 py-2 text-right font-medium">Participação receita</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analisePorCor.map((cor) => (
+                        <tr key={cor.id} className="border-t">
+                          <td className="px-2 py-2 font-medium">{cor.nome}</td>
+                          <td className="px-2 py-2 text-right">
+                            {formatarNumero(cor.unidades, 2)}
+                          </td>
+                          <td className="px-2 py-2 text-right">
+                            {cor.participacaoUnidades === null
+                              ? "—"
+                              : `${formatarNumero(cor.participacaoUnidades, 1)}%`}
+                          </td>
+                          <td className="px-2 py-2 text-right">{formatarLitros(cor.litros)}</td>
+                          <td className="px-2 py-2 text-right">
+                            {cor.participacaoLitros === null
+                              ? "—"
+                              : `${formatarNumero(cor.participacaoLitros, 1)}%`}
+                          </td>
+                          <td className="px-2 py-2 text-right">{formatarMoeda(cor.receita)}</td>
+                          <td className="px-2 py-2 text-right">
+                            {cor.participacaoReceita === null
+                              ? "—"
+                              : `${formatarNumero(cor.participacaoReceita, 1)}%`}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {totalReceitaPorCor > 0 && (
+                    <p className="mt-2 text-right text-xs text-muted-foreground">
+                      Participação da receita é calculada sobre {formatarMoeda(totalReceitaPorCor)}{" "}
+                      no período.
+                    </p>
+                  )}
+                </div>
+              </DashboardChartFrame>
+            </div>
+          </div>
+          {vendasLitrosNaoConvertidas > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {formatarNumero(vendasLitrosNaoConvertidas)} linha(s) de venda sem capacidade de
+              embalagem ou unidade em litros não entram nos totais e participações de volume.
+            </p>
+          )}
+        </section>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2">
         {podeProducao && podeVendas && (
           <DashboardChartFrame
@@ -874,36 +1149,6 @@ function DashboardPage() {
                 { key: "producao", label: "Produção (L)", color: "var(--chart-1)" },
                 { key: "vendas", label: "Vendas entregues (L)", color: "var(--chart-2)" },
               ]}
-            />
-          </DashboardChartFrame>
-        )}
-        {podeVendas && (
-          <DashboardChartFrame
-            title="Vendas por tamanho de embalagem"
-            subtitle="Unidades entregues agrupadas pela embalagem padrão do produto."
-            loading={carregandoVendas}
-            error={erroVendas ?? erroVendas}
-            hasData={vendasPorEmbalagem.length > 0}
-          >
-            <SimpleBarChart
-              data={vendasPorEmbalagem}
-              xKey="nome"
-              series={[{ key: "valor", label: "Unidades entregues", color: "var(--chart-1)" }]}
-            />
-          </DashboardChartFrame>
-        )}
-        {podeVendas && (
-          <DashboardChartFrame
-            title="Vendas por cor"
-            subtitle="Unidades entregues; produtos sem cor permanecem identificados."
-            loading={carregandoVendas}
-            error={erroVendas}
-            hasData={vendasPorCor.length > 0}
-          >
-            <SimpleBarChart
-              data={vendasPorCor}
-              xKey="nome"
-              series={[{ key: "valor", label: "Unidades entregues", color: "var(--chart-3)" }]}
             />
           </DashboardChartFrame>
         )}
