@@ -14,6 +14,7 @@ type Cor = { id: string; nome: string };
 type Embalagem = {
   id: string;
   nome: string;
+  unidade_medida_id: string | null;
   volume_litros: number | string | null;
   capacidade: number | string | null;
   estoque_minimo: number | string | null;
@@ -23,6 +24,7 @@ type Unidade = { id: string; sigla: string };
 type Material = {
   id: string;
   nome: string;
+  unidade_medida_id: string | null;
   estoque_minimo: number | string | null;
   estoque_maximo: number | string | null;
 };
@@ -133,6 +135,7 @@ export function useDashboardData({
   podeParadas,
   periodoDe,
   periodoAte,
+  incluirCatalogosInativos = false,
 }: {
   podeProducao: boolean;
   podeVendas: boolean;
@@ -141,40 +144,56 @@ export function useDashboardData({
   podeParadas: boolean;
   periodoDe: string;
   periodoAte: string;
+  incluirCatalogosInativos?: boolean;
 }) {
   const periodoValido = !!periodoDe && !!periodoAte && periodoDe <= periodoAte;
   const catalogos = useQuery({
-    queryKey: ["dashboard-catalogos-reais"],
+    queryKey: ["dashboard-catalogos-reais", incluirCatalogosInativos],
     queryFn: async () => {
       const [produtosR, coresR, embalagensR, unidadesR, materiaisR, equipamentosR, tanquesR] =
         await Promise.all([
           supabase
             .from("produtos")
             .select("id,nome,cor_id,embalagem_id,unidade_medida_id,estoque_minimo,estoque_maximo")
-            .eq("ativo", true)
+            .or(incluirCatalogosInativos ? "ativo.eq.true,ativo.eq.false" : "ativo.eq.true")
             .order("nome")
             .limit(5000),
-          supabase.from("cores").select("id,nome").eq("ativo", true).order("nome").limit(5000),
+          supabase
+            .from("cores")
+            .select("id,nome")
+            .or(incluirCatalogosInativos ? "ativo.eq.true,ativo.eq.false" : "ativo.eq.true")
+            .order("nome")
+            .limit(5000),
           supabase
             .from("embalagens")
-            .select("id,nome,volume_litros,capacidade,estoque_minimo,estoque_maximo")
-            .eq("ativo", true)
+            .select(
+              "id,nome,unidade_medida_id,volume_litros,capacidade,estoque_minimo,estoque_maximo",
+            )
+            .or(incluirCatalogosInativos ? "ativo.eq.true,ativo.eq.false" : "ativo.eq.true")
             .order("nome")
             .limit(5000),
-          supabase.from("unidades_medida").select("id,sigla").eq("ativo", true).limit(1000),
+          supabase
+            .from("unidades_medida")
+            .select("id,sigla")
+            .or(incluirCatalogosInativos ? "ativo.eq.true,ativo.eq.false" : "ativo.eq.true")
+            .limit(1000),
           supabase
             .from("materiais")
-            .select("id,nome,estoque_minimo,estoque_maximo")
-            .eq("ativo", true)
+            .select("id,nome,unidade_medida_id,estoque_minimo,estoque_maximo")
+            .or(incluirCatalogosInativos ? "ativo.eq.true,ativo.eq.false" : "ativo.eq.true")
             .order("nome")
             .limit(5000),
           supabase
             .from("equipamentos")
             .select("id,nome")
-            .eq("ativo", true)
+            .or(incluirCatalogosInativos ? "ativo.eq.true,ativo.eq.false" : "ativo.eq.true")
             .order("nome")
             .limit(5000),
-          supabase.from("tanques").select("id,equipamento_id").eq("ativo", true).limit(5000),
+          supabase
+            .from("tanques")
+            .select("id,equipamento_id")
+            .or(incluirCatalogosInativos ? "ativo.eq.true,ativo.eq.false" : "ativo.eq.true")
+            .limit(5000),
         ]);
       const falha = [
         produtosR,
