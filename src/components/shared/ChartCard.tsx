@@ -5,13 +5,22 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 
-export function ChartCard({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+export function ChartCard({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="rounded-lg border bg-card p-4">
       <div className="mb-4">
@@ -33,7 +42,15 @@ const tooltipStyle = {
   fontSize: 12,
 };
 
-export function SimpleBarChart<T extends object>({ data, xKey, series }: { data: T[]; xKey: string; series: Series[] }) {
+export function SimpleBarChart<T extends object>({
+  data,
+  xKey,
+  series,
+}: {
+  data: T[];
+  xKey: string;
+  series: Series[];
+}) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data}>
@@ -49,7 +66,15 @@ export function SimpleBarChart<T extends object>({ data, xKey, series }: { data:
   );
 }
 
-export function SimpleLineChart<T extends object>({ data, xKey, series }: { data: T[]; xKey: string; series: Series[] }) {
+export function SimpleLineChart<T extends object>({
+  data,
+  xKey,
+  series,
+}: {
+  data: T[];
+  xKey: string;
+  series: Series[];
+}) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={data}>
@@ -57,8 +82,16 @@ export function SimpleLineChart<T extends object>({ data, xKey, series }: { data
         <XAxis dataKey={xKey} {...axis} />
         <YAxis {...axis} width={36} />
         <Tooltip contentStyle={tooltipStyle} />
+        <Legend wrapperStyle={{ fontSize: 12, color: "var(--muted-foreground)" }} />
         {series.map((s) => (
-          <Line key={s.key} dataKey={s.key} name={s.label} stroke={s.color} strokeWidth={2} dot={false} />
+          <Line
+            key={s.key}
+            dataKey={s.key}
+            name={s.label}
+            stroke={s.color}
+            strokeWidth={2}
+            dot={false}
+          />
         ))}
       </LineChart>
     </ResponsiveContainer>
