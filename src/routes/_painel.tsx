@@ -11,7 +11,10 @@ export const Route = createFileRoute("/_painel")({
   beforeLoad: async ({ location }) => {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/login" });
-    const { data: linhas } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
+    const { data: linhas } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id);
     const perfis = ((linhas ?? []) as { role: Perfil }[]).map((l) => l.role);
     if (!podeAcessar(perfis, location.pathname)) throw redirect({ to: "/sem-acesso" });
     return { user: data.user, perfis };
@@ -20,7 +23,7 @@ export const Route = createFileRoute("/_painel")({
 });
 
 function PainelLayout() {
-  const { user } = Route.useRouteContext();
+  const { user, perfis } = Route.useRouteContext();
   const nome =
     (user.user_metadata?.["nome"] as string | undefined) ?? user.email?.split("@")[0] ?? "Usuário";
 
@@ -29,7 +32,7 @@ function PainelLayout() {
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <div className="flex min-w-0 flex-1 flex-col">
-          <AppHeader userName={nome} userEmail={user.email ?? ""} />
+          <AppHeader userName={nome} userEmail={user.email ?? ""} perfis={perfis} />
           <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 p-4 pb-24 sm:p-6 md:pb-6 lg:p-8">
             <Outlet />
           </main>

@@ -20,6 +20,7 @@ export const PERFIL_LABEL: Record<Perfil, string> = {
 /** Quem pode abrir cada página. Administrador e gestor sempre veem tudo (exceto Configurações = só admin). */
 const ACESSO: Record<string, Perfil[]> = {
   "/dashboard": [...PERFIS],
+  "/alertas": [...PERFIS],
   "/producao": ["producao"],
   "/envase": ["producao"], // envase manual dos lotes
   "/perdas": ["producao"],

@@ -11,12 +11,14 @@ import {
   FileBarChart,
   FolderCog,
   Settings,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 
 export type NavItem = {
   to:
     | "/dashboard"
+    | "/alertas"
     | "/producao"
     | "/envase"
     | "/pedidos"
@@ -36,6 +38,7 @@ export type NavItem = {
 
 export const navItems: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, mobile: true },
+  { to: "/alertas", label: "Alertas", icon: Bell, mobile: true },
   { to: "/producao", label: "Produção", icon: Factory, mobile: true },
   { to: "/envase", label: "Envase", icon: Package, mobile: true },
   { to: "/pedidos", label: "Pedidos", icon: ClipboardList, mobile: true },
