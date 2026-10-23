@@ -435,8 +435,8 @@ function gerarModelo(
         maximo = numero(produto?.estoque_maximo);
         unidade = unidades.get(produto?.unidade_medida_id ?? "") ?? unidade;
         tipo = "Produto acabado";
-      } else if (saldo.tipo_item === "embalagem" && saldo.embalagem_id) {
-        const embalagem = embalagens.get(saldo.embalagem_id);
+      } else if (saldo.tipo_item === "embalagem") {
+        const embalagem = embalagens.get(saldo.item_id);
         nome = embalagem?.nome ?? nome;
         minimo = numero(embalagem?.estoque_minimo);
         maximo = numero(embalagem?.estoque_maximo);

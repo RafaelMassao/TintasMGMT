@@ -382,7 +382,7 @@ function DashboardPage() {
         : saldo.tipo_item === "embalagem"
           ? filtros.produto === "todos" &&
             filtros.cor === "todas" &&
-            (filtros.embalagem === "todas" || saldo.embalagem_id === filtros.embalagem)
+            (filtros.embalagem === "todas" || saldo.item_id === filtros.embalagem)
           : !temFiltroDimensao;
     const item: ItemEstoque = {
       id: saldo.item_id,
