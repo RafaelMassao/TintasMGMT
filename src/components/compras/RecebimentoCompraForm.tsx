@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { notify } from "@/lib/notify";
 import { hojeISO } from "@/lib/pedidos";
 import { numCompras, totalRecebido, type PedidoCompra } from "@/lib/compras";
+import { dataISOValida, mensagemErroValidacao, numeroPtBR } from "@/lib/validacao";
 
 type LinhaRecebimento = {
   quantidade: string;
@@ -24,7 +25,7 @@ type LinhaRecebimento = {
   validade: string;
   observacoes: string;
 };
-const quantidade = (v: string) => Number(v.replace(",", "."));
+const quantidade = (v: string) => numeroPtBR(v);
 
 export function RecebimentoCompraForm({
   pedido,
@@ -49,7 +50,10 @@ export function RecebimentoCompraForm({
   );
   const qtdInformada = useMemo(
     () =>
-      Object.values(linhas).reduce((s, l) => s + Math.max(0, quantidade(l.quantidade || "0")), 0),
+      Object.values(linhas).reduce(
+        (s, l) => s + Math.max(0, quantidade(l.quantidade || "0") ?? 0),
+        0,
+      ),
     [linhas],
   );
 
@@ -61,7 +65,7 @@ export function RecebimentoCompraForm({
         _observacoes: observacoes.trim() || null,
         _itens: pedido.itens_pedido_compra.map((item) => ({
           item_id: item.id,
-          quantidade_recebida: Math.max(0, quantidade(linhas[item.id]?.quantidade || "0")),
+          quantidade_recebida: Math.max(0, quantidade(linhas[item.id]?.quantidade || "0") ?? 0),
           numero_lote: linhas[item.id]?.numero_lote.trim() || null,
           data_fabricacao: linhas[item.id]?.data_fabricacao || null,
           validade: linhas[item.id]?.validade || null,
@@ -80,21 +84,38 @@ export function RecebimentoCompraForm({
       qc.invalidateQueries({ queryKey: ["estoque-historico"] });
       onOpenChange(false);
     },
-    onError: (e: Error) => notify.error("Não foi possível registrar o recebimento", e.message),
+    onError: (e: Error) =>
+      notify.error(
+        "Não foi possível registrar o recebimento",
+        mensagemErroValidacao(e.message) ===
+          "Não foi possível salvar. Confira os dados e tente novamente."
+          ? e.message
+          : mensagemErroValidacao(e.message),
+      ),
   });
 
   function validar() {
     const next: Record<string, string> = {};
-    if (!data) next["data"] = "Informe a data do recebimento.";
+    if (!dataISOValida(data)) next["data"] = "Informe uma data válida para o recebimento.";
     if (qtdInformada <= 0)
       next["quantidade"] = "Informe uma quantidade recebida maior que zero em pelo menos um item.";
     for (const item of pedido.itens_pedido_compra) {
       const linha = linhas[item.id];
       if (!linha) continue;
       const q = quantidade(linha.quantidade || "0");
-      if (!Number.isFinite(q) || q < 0)
+      if (q === null || !Number.isFinite(q) || q < 0)
         next[`${item.id}.qtd`] = "Informe uma quantidade válida, igual ou maior que zero.";
-      if (linha.data_fabricacao && linha.validade && linha.validade < linha.data_fabricacao)
+      if (linha.data_fabricacao && !dataISOValida(linha.data_fabricacao))
+        next[`${item.id}.fabricacao`] = "Informe uma data de fabricação válida.";
+      if (linha.validade && !dataISOValida(linha.validade))
+        next[`${item.id}.validade`] = "Informe uma data de validade válida.";
+      if (
+        linha.data_fabricacao &&
+        linha.validade &&
+        dataISOValida(linha.data_fabricacao) &&
+        dataISOValida(linha.validade) &&
+        linha.validade < linha.data_fabricacao
+      )
         next[`${item.id}.validade`] = "A validade não pode ser anterior à fabricação.";
     }
     setErros(next);
@@ -148,9 +169,9 @@ export function RecebimentoCompraForm({
               const solicitado = Number(item.quantidade_solicitada);
               const jaRecebido = totalRecebido(item);
               const falta = Math.max(0, solicitado - jaRecebido);
-              const qtdAtual = Number.isFinite(quantidade(linha.quantidade || "0"))
-                ? Math.max(0, quantidade(linha.quantidade || "0"))
-                : 0;
+              const valorAtual = quantidade(linha.quantidade || "0");
+              const qtdAtual =
+                valorAtual !== null && Number.isFinite(valorAtual) ? Math.max(0, valorAtual) : 0;
               const excedente = qtdAtual > falta;
               return (
                 <section
@@ -197,7 +218,11 @@ export function RecebimentoCompraForm({
                         placeholder="Opcional"
                       />
                     </FormField>
-                    <FormField id={`fabricacao-${item.id}`} label="Fabricação">
+                    <FormField
+                      id={`fabricacao-${item.id}`}
+                      label="Fabricação"
+                      error={erros[`${item.id}.fabricacao`]}
+                    >
                       <Input
                         id={`fabricacao-${item.id}`}
                         type="date"

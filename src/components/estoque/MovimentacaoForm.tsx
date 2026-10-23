@@ -13,6 +13,7 @@ import {
   type ItemEstoque,
   type TipoMovimentacao,
 } from "@/lib/estoque";
+import { dataHoraLocalValida, numeroPtBR } from "@/lib/validacao";
 
 const agoraLocal = () => {
   const d = new Date();
@@ -66,12 +67,13 @@ export function MovimentacaoForm({
   const salvar = useMutation({
     mutationFn: async () => {
       const item = itens.find((i) => i.id === itemId);
-      const qtd = Number(quantidade.replace(",", "."));
+      const qtd = numeroPtBR(quantidade);
       if (!item) throw new Error("Selecione um item do estoque.");
-      if (!Number.isFinite(qtd) || qtd <= 0)
+      if (qtd === null || !Number.isFinite(qtd) || qtd <= 0)
         throw new Error("A quantidade deve ser maior que zero.");
       if (!motivo.trim()) throw new Error("Informe a origem ou o motivo da movimentação.");
-      if (!data) throw new Error("Informe a data da movimentação.");
+      if (!dataHoraLocalValida(data))
+        throw new Error("Informe uma data e hora válidas para a movimentação.");
       if (!movimentoPermitidos.some((m) => m.value === tipo))
         throw new Error("Seu perfil não pode registrar este tipo de movimentação.");
 
@@ -120,7 +122,11 @@ export function MovimentacaoForm({
       <FormField
         id="mov-tipo"
         label="Tipo de movimentação *"
-        error={erro && !movimentoPermitidos.length ? erro : undefined}
+        error={
+          erro.includes("tipo de movimentação") || (erro && !movimentoPermitidos.length)
+            ? erro
+            : undefined
+        }
       >
         <select
           className={selectClass}
@@ -135,7 +141,11 @@ export function MovimentacaoForm({
           ))}
         </select>
       </FormField>
-      <FormField id="mov-item" label="Item *">
+      <FormField
+        id="mov-item"
+        label="Item *"
+        error={erro.includes("item do estoque") ? erro : undefined}
+      >
         <select
           className={selectClass}
           id="mov-item"
@@ -165,7 +175,11 @@ export function MovimentacaoForm({
             onChange={(e) => setQuantidade(e.target.value)}
           />
         </FormField>
-        <FormField id="mov-data" label="Data e hora *">
+        <FormField
+          id="mov-data"
+          label="Data e hora *"
+          error={erro.includes("data e hora") ? erro : undefined}
+        >
           <Input
             id="mov-data"
             type="datetime-local"

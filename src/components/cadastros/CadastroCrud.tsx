@@ -12,21 +12,37 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { notify } from "@/lib/notify";
+import { numeroPtBR } from "@/lib/validacao";
 
 const POR_PAGINA = 10;
 const NENHUM = "__nenhum__";
-const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
+const UFS =
+  "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
 
 function traduzirErro(msg: string) {
-  if (/duplicate key|unique/i.test(msg)) return "Já existe um registro com esse código, nome ou documento.";
-  if (/row-level security|permission denied/i.test(msg)) return "Você não tem permissão para esta ação.";
+  if (/duplicate key|unique/i.test(msg))
+    return "Já existe um registro com esse código, nome ou documento.";
+  if (/row-level security|permission denied/i.test(msg))
+    return "Você não tem permissão para esta ação.";
   if (/foreign key/i.test(msg)) return "Este registro está ligado a outros dados.";
   return "Tente novamente. Se persistir, contate o suporte.";
 }
 
-export function CadastroCrud({ config, podeEditar }: { config: CadastroConfig; podeEditar: boolean }) {
+export function CadastroCrud({
+  config,
+  podeEditar,
+}: {
+  config: CadastroConfig;
+  podeEditar: boolean;
+}) {
   const qc = useQueryClient();
   const [busca, setBusca] = useState("");
   const [buscaAtiva, setBuscaAtiva] = useState("");
@@ -59,12 +75,16 @@ export function CadastroCrud({ config, podeEditar }: { config: CadastroConfig; p
   });
 
   useEffect(() => {
-    if (lista.error) notify.error("Não foi possível carregar os dados", traduzirErro(lista.error.message));
+    if (lista.error)
+      notify.error("Não foi possível carregar os dados", traduzirErro(lista.error.message));
   }, [lista.error]);
 
   const alternarAtivo = useMutation({
     mutationFn: async (r: Registro) => {
-      const { error } = await supabase.from(config.tabela).update({ ativo: !r.ativo }).eq("id", r.id);
+      const { error } = await supabase
+        .from(config.tabela)
+        .update({ ativo: !r.ativo })
+        .eq("id", r.id);
       if (error) throw error;
       return r;
     },
@@ -89,7 +109,11 @@ export function CadastroCrud({ config, podeEditar }: { config: CadastroConfig; p
     {
       key: "ativo",
       header: "Situação",
-      cell: (r) => <StatusBadge tone={r.ativo ? "success" : "neutral"}>{r.ativo ? "Ativo" : "Inativo"}</StatusBadge>,
+      cell: (r) => (
+        <StatusBadge tone={r.ativo ? "success" : "neutral"}>
+          {r.ativo ? "Ativo" : "Inativo"}
+        </StatusBadge>
+      ),
     },
   ];
 
@@ -130,12 +154,23 @@ export function CadastroCrud({ config, podeEditar }: { config: CadastroConfig; p
         getRowId={(r) => r.id}
         loading={lista.isLoading}
         emptyTitle={buscaAtiva ? "Nada encontrado" : `Nenhum ${config.singular} cadastrado`}
-        emptyDescription={buscaAtiva ? "Tente outra palavra na busca." : podeEditar ? `Clique em "Novo ${config.singular}" para começar.` : undefined}
+        emptyDescription={
+          buscaAtiva
+            ? "Tente outra palavra na busca."
+            : podeEditar
+              ? `Clique em "Novo ${config.singular}" para começar.`
+              : undefined
+        }
         rowActions={
           podeEditar
             ? (r) => (
                 <div className="flex justify-end gap-1">
-                  <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => setEditando(r)}>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Editar"
+                    onClick={() => setEditando(r)}
+                  >
                     <Pencil className="h-4 w-4" />
                   </Button>
                   {r.ativo ? (
@@ -143,15 +178,30 @@ export function CadastroCrud({ config, podeEditar }: { config: CadastroConfig; p
                       title={`Inativar ${config.singular}?`}
                       description="O registro deixa de aparecer nas escolhas do sistema, mas o histórico é mantido. Você pode reativá-lo depois."
                       confirmLabel="Inativar"
-                      onConfirm={() => alternarAtivo.mutateAsync(r).then(() => undefined, () => undefined)}
+                      onConfirm={() =>
+                        alternarAtivo.mutateAsync(r).then(
+                          () => undefined,
+                          () => undefined,
+                        )
+                      }
                       trigger={
-                        <Button size="icon" variant="ghost" aria-label="Inativar" className="text-destructive">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Inativar"
+                          className="text-destructive"
+                        >
                           <Power className="h-4 w-4" />
                         </Button>
                       }
                     />
                   ) : (
-                    <Button size="icon" variant="ghost" aria-label="Reativar" onClick={() => alternarAtivo.mutate(r)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Reativar"
+                      onClick={() => alternarAtivo.mutate(r)}
+                    >
                       <RotateCcw className="h-4 w-4" />
                     </Button>
                   )}
@@ -167,10 +217,20 @@ export function CadastroCrud({ config, podeEditar }: { config: CadastroConfig; p
             {total} registro{total !== 1 && "s"} · página {pagina + 1} de {paginas}
           </span>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={pagina === 0}
+              onClick={() => setPagina((p) => p - 1)}
+            >
               <ChevronLeft className="h-4 w-4" /> Anterior
             </Button>
-            <Button size="sm" variant="outline" disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={pagina + 1 >= paginas}
+              onClick={() => setPagina((p) => p + 1)}
+            >
               Próxima <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -186,10 +246,18 @@ export function CadastroCrud({ config, podeEditar }: { config: CadastroConfig; p
 
 function valorInicial(c: Campo, r: Registro | null) {
   const v = r?.[c.nome];
-  return v === null || v === undefined ? c.valorPadrao ?? "" : String(v);
+  return v === null || v === undefined ? (c.valorPadrao ?? "") : String(v);
 }
 
-function Formulario({ config, registro, onClose }: { config: CadastroConfig; registro: Registro | null; onClose: () => void }) {
+function Formulario({
+  config,
+  registro,
+  onClose,
+}: {
+  config: CadastroConfig;
+  registro: Registro | null;
+  onClose: () => void;
+}) {
   const qc = useQueryClient();
   const [valores, setValores] = useState<Record<string, string>>(() =>
     Object.fromEntries(config.campos.map((c) => [c.nome, valorInicial(c, registro)])),
@@ -222,12 +290,15 @@ function Formulario({ config, registro, onClose }: { config: CadastroConfig; reg
         dados[c.nome] = null;
         continue;
       }
-      if ("max" in c && c.max && v.length > c.max) novosErros[c.nome] = `Máximo de ${c.max} caracteres`;
-      if (c.tipo === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) novosErros[c.nome] = "E-mail inválido";
+      if ("max" in c && c.max && v.length > c.max)
+        novosErros[c.nome] = `Máximo de ${c.max} caracteres`;
+      if (c.tipo === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))
+        novosErros[c.nome] = "E-mail inválido";
       if (c.tipo === "numero") {
-        const n = Number(v.replace(/\./g, "").replace(",", ".").trim() === "" ? NaN : v.replace(",", "."));
-        if (!Number.isFinite(n)) novosErros[c.nome] = "Informe um número válido";
-        else if (c.min !== undefined && n < c.min) novosErros[c.nome] = c.min > 0 ? "Deve ser maior que zero" : "Não pode ser negativo";
+        const n = numeroPtBR(v);
+        if (n === null) novosErros[c.nome] = "Informe um número válido.";
+        else if (c.min !== undefined && n < c.min)
+          novosErros[c.nome] = c.min > 0 ? "Deve ser maior que zero" : "Não pode ser negativo";
         dados[c.nome] = n;
       } else dados[c.nome] = c.tipo === "uf" || c.nome === "codigo" ? v.toUpperCase() : v;
     }
@@ -235,10 +306,20 @@ function Formulario({ config, registro, onClose }: { config: CadastroConfig; reg
 
     // Impede duplicados (o banco também bloqueia)
     for (const c of config.campos.filter((x) => x.unico && dados[x.nome] && !novosErros[x.nome])) {
-      let q = supabase.from(config.tabela).select("id", { count: "exact", head: true }).ilike(c.nome, String(dados[c.nome]).replace(/[%_\\]/g, "\\$&"));
+      let q = supabase
+        .from(config.tabela)
+        .select("id", { count: "exact", head: true })
+        .ilike(c.nome, String(dados[c.nome]).replace(/[%_\\]/g, "\\$&"));
       if (registro) q = q.neq("id", registro.id);
-      const { count } = await q;
-      if (count) novosErros[c.nome] = `Já existe ${config.singular === "embalagem" ? "uma embalagem" : "um cadastro"} com este ${c.rotulo.toLowerCase()}`;
+      const { count, error } = await q;
+      if (error) {
+        novosErros[c.nome] =
+          "Não foi possível verificar se este valor já está cadastrado. Tente novamente.";
+        continue;
+      }
+      if (count)
+        novosErros[c.nome] =
+          `Já existe ${config.singular === "embalagem" ? "uma embalagem" : "um cadastro"} com este ${c.rotulo.toLowerCase()}`;
     }
 
     setErros(novosErros);
@@ -262,7 +343,12 @@ function Formulario({ config, registro, onClose }: { config: CadastroConfig; reg
       onSubmit={enviar}
     >
       {config.campos.map((c) => (
-        <FormField key={c.nome} id={c.nome} label={c.rotulo + (c.obrigatorio ? " *" : "")} {...(erros[c.nome] ? { error: erros[c.nome]! } : {})}>
+        <FormField
+          key={c.nome}
+          id={c.nome}
+          label={c.rotulo + (c.obrigatorio ? " *" : "")}
+          {...(erros[c.nome] ? { error: erros[c.nome]! } : {})}
+        >
           <CampoInput campo={c} valor={valores[c.nome] ?? ""} onChange={(v) => set(c.nome, v)} />
         </FormField>
       ))}
@@ -270,8 +356,17 @@ function Formulario({ config, registro, onClose }: { config: CadastroConfig; reg
   );
 }
 
-function CampoInput({ campo: c, valor, onChange }: { campo: Campo; valor: string; onChange: (v: string) => void }) {
-  if (c.tipo === "textarea") return <Textarea id={c.nome} value={valor} onChange={(e) => onChange(e.target.value)} />;
+function CampoInput({
+  campo: c,
+  valor,
+  onChange,
+}: {
+  campo: Campo;
+  valor: string;
+  onChange: (v: string) => void;
+}) {
+  if (c.tipo === "textarea")
+    return <Textarea id={c.nome} value={valor} onChange={(e) => onChange(e.target.value)} />;
   if (c.tipo === "cor")
     return (
       <div className="flex gap-2">
@@ -282,15 +377,35 @@ function CampoInput({ campo: c, valor, onChange }: { campo: Campo; valor: string
           onChange={(e) => onChange(e.target.value)}
           className="h-10 w-12 cursor-pointer rounded border bg-card"
         />
-        <Input id={c.nome} value={valor} placeholder="#1E3A5F" onChange={(e) => onChange(e.target.value)} />
+        <Input
+          id={c.nome}
+          value={valor}
+          placeholder="#1E3A5F"
+          onChange={(e) => onChange(e.target.value)}
+        />
       </div>
     );
   if (c.tipo === "uf" || c.tipo === "opcoes" || c.tipo === "referencia") {
-    const opcoes = c.tipo === "uf" ? UFS.map((u) => ({ value: u, label: u })) : c.tipo === "opcoes" ? c.opcoes : null;
+    const opcoes =
+      c.tipo === "uf"
+        ? UFS.map((u) => ({ value: u, label: u }))
+        : c.tipo === "opcoes"
+          ? c.opcoes
+          : null;
     return opcoes ? (
-      <Escolha id={c.nome} valor={valor} onChange={onChange} opcoes={opcoes} opcional={!c.obrigatorio} />
+      <Escolha
+        id={c.nome}
+        valor={valor}
+        onChange={onChange}
+        opcoes={opcoes}
+        opcional={!c.obrigatorio}
+      />
     ) : (
-      <Referencia campo={c as Extract<Campo, { tipo: "referencia" }>} valor={valor} onChange={onChange} />
+      <Referencia
+        campo={c as Extract<Campo, { tipo: "referencia" }>}
+        valor={valor}
+        onChange={onChange}
+      />
     );
   }
   return (
@@ -320,7 +435,10 @@ function Escolha({
   carregando?: boolean;
 }) {
   return (
-    <Select value={valor || (opcional ? NENHUM : "")} onValueChange={(v) => onChange(v === NENHUM ? "" : v)}>
+    <Select
+      value={valor || (opcional ? NENHUM : "")}
+      onValueChange={(v) => onChange(v === NENHUM ? "" : v)}
+    >
       <SelectTrigger id={id}>
         <SelectValue placeholder={carregando ? "Carregando..." : "Selecione"} />
       </SelectTrigger>
@@ -336,19 +454,44 @@ function Escolha({
   );
 }
 
-function Referencia({ campo, valor, onChange }: { campo: Extract<Campo, { tipo: "referencia" }>; valor: string; onChange: (v: string) => void }) {
+function Referencia({
+  campo,
+  valor,
+  onChange,
+}: {
+  campo: Extract<Campo, { tipo: "referencia" }>;
+  valor: string;
+  onChange: (v: string) => void;
+}) {
   const q = useQuery({
     queryKey: ["opcoes", campo.tabela, campo.filtro?.valor],
     queryFn: async () => {
-      let consulta = supabase.from(campo.tabela).select(["id", "ativo", ...campo.rotuloColunas].join(",")).eq("ativo", true);
+      let consulta = supabase
+        .from(campo.tabela)
+        .select(["id", "ativo", ...campo.rotuloColunas].join(","))
+        .eq("ativo", true);
       if (campo.filtro) consulta = consulta.eq(campo.filtro.coluna, campo.filtro.valor);
-      const { data, error } = await consulta.order(campo.rotuloColunas[campo.rotuloColunas.length - 1]!);
+      const { data, error } = await consulta.order(
+        campo.rotuloColunas[campo.rotuloColunas.length - 1]!,
+      );
       if (error) throw error;
       return ((data ?? []) as unknown as Record<string, string>[]).map((r) => ({
         value: r["id"]!,
-        label: campo.rotuloColunas.map((k) => r[k]).filter(Boolean).join(" — "),
+        label: campo.rotuloColunas
+          .map((k) => r[k])
+          .filter(Boolean)
+          .join(" — "),
       }));
     },
   });
-  return <Escolha id={campo.nome} valor={valor} onChange={onChange} opcoes={q.data ?? []} opcional={!campo.obrigatorio} carregando={q.isLoading} />;
+  return (
+    <Escolha
+      id={campo.nome}
+      valor={valor}
+      onChange={onChange}
+      opcoes={q.data ?? []}
+      opcional={!campo.obrigatorio}
+      carregando={q.isLoading}
+    />
+  );
 }
