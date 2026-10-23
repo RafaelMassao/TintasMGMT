@@ -70,7 +70,6 @@ type Saldo = {
   tipo_item: "material" | "produto" | "embalagem";
   material_id: string | null;
   produto_id: string | null;
-  embalagem_id: string | null;
   saldo: number | string;
 };
 type Perda = {
@@ -315,7 +314,7 @@ export function useDashboardData({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("v_estoque_saldo")
-        .select("item_id,tipo_item,material_id,produto_id,embalagem_id,saldo")
+        .select("item_id,tipo_item,material_id,produto_id,saldo")
         .limit(10000);
       if (error) throw error;
       return (data ?? []) as unknown as Saldo[];
