@@ -19,6 +19,15 @@ export type EquipmentRecord = EquipmentOption & {
   ultima_revisao_em: string | null;
   proxima_revisao_em: string | null;
 };
+export type LotOption = { id: string; numero_lote: string; pedido_id: string | null };
+export type OrderOption = { id: string; numero: string };
+export type MaintenanceOption = {
+  id: string;
+  tipo: string;
+  status: string;
+  data_prevista: string;
+  equipamento_id: string;
+};
 
 const today = () => {
   const date = new Date();
@@ -38,6 +47,7 @@ function useRefreshMaintenance() {
       queryClient.invalidateQueries({ queryKey: ["manutencao-equipamentos"] }),
       queryClient.invalidateQueries({ queryKey: ["manutencao-agenda"] }),
       queryClient.invalidateQueries({ queryKey: ["manutencao-historico"] }),
+      queryClient.invalidateQueries({ queryKey: ["manutencao-historico-impacto"] }),
       queryClient.invalidateQueries({ queryKey: ["manutencao-dashboard"] }),
     ]);
   };
@@ -339,19 +349,31 @@ export function ParadaForm({
   open,
   onOpenChange,
   equipamentos,
+  lotes,
+  pedidos,
+  manutencoes,
   responsavelId,
   responsavelNome,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   equipamentos: EquipmentOption[];
+  lotes: LotOption[];
+  pedidos: OrderOption[];
+  manutencoes: MaintenanceOption[];
   responsavelId: string | null;
   responsavelNome: string;
 }) {
   const refresh = useRefreshMaintenance();
   const [equipamentoId, setEquipamentoId] = useState("");
+  const [manutencaoId, setManutencaoId] = useState("");
+  const [loteId, setLoteId] = useState("");
+  const [pedidoId, setPedidoId] = useState("");
   const [causa, setCausa] = useState("");
   const [descricao, setDescricao] = useState("");
+  const [quantidade, setQuantidade] = useState("");
+  const [unidade, setUnidade] = useState("L");
+  const [atrasoMinutos, setAtrasoMinutos] = useState("0");
   const [inicio, setInicio] = useState(() => {
     const date = new Date();
     date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
@@ -365,11 +387,28 @@ export function ParadaForm({
       const inicioDate = new Date(inicio);
       if (Number.isNaN(inicioDate.getTime()) || inicioDate.getTime() > Date.now())
         throw new Error("O início da parada não pode estar no futuro.");
+      const quantidadePerdida = quantidade.trim() ? Number(quantidade) : null;
+      const atraso = Number(atrasoMinutos);
+      if (
+        quantidadePerdida !== null &&
+        (!Number.isFinite(quantidadePerdida) || quantidadePerdida < 0)
+      )
+        throw new Error("A quantidade não produzida deve ser um número igual ou maior que zero.");
+      if (!Number.isInteger(atraso) || atraso < 0)
+        throw new Error(
+          "O atraso causado deve ser informado em minutos inteiros, sem valor negativo.",
+        );
       const { error } = await supabase.from("paradas_equipamento").insert({
         equipamento_id: equipamentoId,
+        manutencao_id: manutencaoId || null,
         inicio_em: inicioDate.toISOString(),
         causa: causa.trim(),
         descricao: descricao.trim() || null,
+        lote_id: loteId || null,
+        pedido_id: pedidoId || null,
+        quantidade_nao_produzida: quantidadePerdida,
+        unidade_nao_produzida: unidade,
+        atraso_causado_minutos: atraso,
         responsavel_id: responsavelId,
         responsavel_nome: responsavelNome,
       });
@@ -379,6 +418,12 @@ export function ParadaForm({
       await refresh();
       setCausa("");
       setDescricao("");
+      setManutencaoId("");
+      setLoteId("");
+      setPedidoId("");
+      setQuantidade("");
+      setUnidade("L");
+      setAtrasoMinutos("0");
       onOpenChange(false);
     },
     onError: (error: Error) => setErro(error.message),
@@ -401,7 +446,10 @@ export function ParadaForm({
           id="parada-equipamento"
           className={selectClass}
           value={equipamentoId}
-          onChange={(e) => setEquipamentoId(e.target.value)}
+          onChange={(e) => {
+            setEquipamentoId(e.target.value);
+            setManutencaoId("");
+          }}
         >
           <option value="">Selecione...</option>
           {equipamentos
@@ -432,6 +480,101 @@ export function ParadaForm({
           />
         </FormField>
       </div>
+      <FormField id="parada-manutencao" label="Manutenção associada">
+        <select
+          id="parada-manutencao"
+          className={selectClass}
+          value={manutencaoId}
+          onChange={(e) => setManutencaoId(e.target.value)}
+        >
+          <option value="">Sem associação</option>
+          {manutencoes
+            .filter((item) => item.equipamento_id === equipamentoId && item.status !== "cancelada")
+            .map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.tipo === "preventiva"
+                  ? "Preventiva"
+                  : item.tipo === "corretiva"
+                    ? "Corretiva"
+                    : "Inspeção"}
+                {` · ${item.data_prevista} · ${item.status}`}
+              </option>
+            ))}
+        </select>
+      </FormField>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField id="parada-lote" label="Lote afetado">
+          <select
+            id="parada-lote"
+            className={selectClass}
+            value={loteId}
+            onChange={(e) => setLoteId(e.target.value)}
+          >
+            <option value="">Nenhum lote</option>
+            {lotes.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.numero_lote}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField id="parada-pedido" label="Pedido afetado">
+          <select
+            id="parada-pedido"
+            className={selectClass}
+            value={pedidoId}
+            onChange={(e) => setPedidoId(e.target.value)}
+          >
+            <option value="">Nenhum pedido</option>
+            {pedidos.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.numero}
+              </option>
+            ))}
+          </select>
+        </FormField>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField id="parada-quantidade-perdida" label="Quantidade que deixou de ser produzida">
+          <div className="flex gap-2">
+            <Input
+              id="parada-quantidade-perdida"
+              type="number"
+              min="0"
+              step="0.001"
+              value={quantidade}
+              onChange={(e) => setQuantidade(e.target.value)}
+              placeholder="Não informado"
+            />
+            <select
+              aria-label="Unidade da produção afetada"
+              className={`${selectClass} w-28`}
+              value={unidade}
+              onChange={(e) => setUnidade(e.target.value)}
+            >
+              <option value="L">L</option>
+              <option value="kg">kg</option>
+              <option value="un">un</option>
+              <option value="latas">latas</option>
+              <option value="unidades">unidades</option>
+            </select>
+          </div>
+        </FormField>
+        <FormField id="parada-atraso-causado" label="Atraso causado (minutos)">
+          <Input
+            id="parada-atraso-causado"
+            type="number"
+            min="0"
+            step="1"
+            value={atrasoMinutos}
+            onChange={(e) => setAtrasoMinutos(e.target.value)}
+          />
+        </FormField>
+      </div>
+      <p className="-mt-2 text-xs text-muted-foreground">
+        A duração da parada é calculada pelo início e fim. O atraso é uma estimativa separada do
+        impacto na programação.
+      </p>
       <FormField id="parada-descricao" label="Descrição">
         <Textarea
           id="parada-descricao"
