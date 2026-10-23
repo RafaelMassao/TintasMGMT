@@ -87,11 +87,20 @@ type Parada = {
   id: string;
   equipamento_id: string;
   equipamento_nome: string;
+  manutencao_tipo: string | null;
   inicio_em: string;
   fim_em: string | null;
   motivo: string;
   lote_id: string | null;
   pedido_id: string | null;
+};
+type ManutencaoDashboard = {
+  id: string;
+  equipamento_id: string;
+  tipo: "preventiva" | "corretiva" | "inspecao";
+  status: string;
+  data_prevista: string;
+  data_conclusao: string | null;
 };
 type Filtros = {
   produto: string;
@@ -323,7 +332,9 @@ export function useDashboardData({
       const ate = fimInclusivoIso(periodoAte);
       const paradasR = await supabase
         .from("v_paradas_impacto")
-        .select("id,equipamento_id,equipamento_nome,inicio_em,fim_em,motivo,lote_id,pedido_id")
+        .select(
+          "id,equipamento_id,equipamento_nome,manutencao_tipo,inicio_em,fim_em,motivo,lote_id,pedido_id",
+        )
         .lte("inicio_em", ate)
         .or(`fim_em.is.null,fim_em.gte.${de}`)
         .limit(10000);
@@ -364,7 +375,42 @@ export function useDashboardData({
     retry: false,
   });
 
-  return { catalogos, producao, vendas, estoque, perdas, paradas };
+  const manutencoes = useQuery({
+    queryKey: ["dashboard-manutencoes-reais", periodoDe, periodoAte],
+    enabled: podeParadas && periodoValido,
+    queryFn: async () => {
+      const de = inicioIso(periodoDe);
+      const ate = fimExclusivoIso(periodoAte);
+      const [previstasR, concluidasR] = await Promise.all([
+        supabase
+          .from("manutencoes")
+          .select("id,equipamento_id,tipo,status,data_prevista,data_conclusao")
+          .gte("data_prevista", periodoDe)
+          .lte("data_prevista", periodoAte)
+          .limit(10000),
+        supabase
+          .from("manutencoes")
+          .select("id,equipamento_id,tipo,status,data_prevista,data_conclusao")
+          .gte("data_conclusao", de)
+          .lt("data_conclusao", ate)
+          .limit(10000),
+      ]);
+      const falha = [previstasR, concluidasR].find((resposta) => resposta.error);
+      if (falha?.error) throw falha.error;
+      const unicas = new Map<string, ManutencaoDashboard>();
+      for (const item of [...(previstasR.data ?? []), ...(concluidasR.data ?? [])]) {
+        unicas.set(item.id, item as unknown as ManutencaoDashboard);
+      }
+      return [...unicas.values()].filter((item) => {
+        const dataReferencia = (item.data_conclusao ?? item.data_prevista).slice(0, 10);
+        return dataReferencia >= periodoDe && dataReferencia <= periodoAte;
+      });
+    },
+    staleTime: 30_000,
+    retry: false,
+  });
+
+  return { catalogos, producao, vendas, estoque, perdas, paradas, manutencoes };
 }
 
 export type {
