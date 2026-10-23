@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Factory, ClipboardList, Clock3, Droplets, TriangleAlert } from "lucide-react";
+import { Factory, ClipboardList, Clock3, Droplets, TriangleAlert, Wrench } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatCard } from "@/components/shared/StatCard";
 import { ChartCard, SimpleBarChart, SimpleLineChart } from "@/components/shared/ChartCard";
@@ -62,6 +62,29 @@ const columns: Column<OrdemProducao>[] = [
 ];
 
 function DashboardPage() {
+  const manutencao = useQuery({
+    queryKey: ["manutencao-dashboard"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("v_manutencao_indicadores_equipamento")
+        .select(
+          "equipamento_id,nome,proxima_revisao_em,revisao_vencida,tem_parada_aberta,falhas_30_dias,minutos_parado_30_dias,disponibilidade_30_dias_pct",
+        )
+        .eq("ativo", true)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 30_000,
+    retry: false,
+  });
+  const manutencaoAlerts = (manutencao.data ?? []).filter(
+    (item) =>
+      item.revisao_vencida ||
+      item.tem_parada_aberta ||
+      Number(item.falhas_30_dias) >= 3 ||
+      Number(item.minutos_parado_30_dias) >= 480,
+  );
   const atrasos = useQuery({
     queryKey: ["dashboard-ocorrencias"],
     queryFn: async () => {
@@ -95,7 +118,7 @@ function DashboardPage() {
         description="Dados demonstrativos — serão substituídos pelos dados reais."
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard
           label="Produção hoje"
           value={mockKpis.producaoHoje}
@@ -128,6 +151,15 @@ function DashboardPage() {
           hint="Ocorrências abertas após a previsão"
           icon={Clock3}
           tone="warning"
+        />
+        <StatCard
+          label="Alertas de manutenção"
+          value={
+            manutencao.isError ? "—" : manutencao.isLoading ? "…" : String(manutencaoAlerts.length)
+          }
+          hint="Revisões, paradas e falhas"
+          icon={Wrench}
+          tone={manutencaoAlerts.length ? "warning" : "success"}
         />
       </div>
 
@@ -175,6 +207,52 @@ function DashboardPage() {
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">Nenhuma ocorrência em atraso no momento.</p>
+        )}
+      </section>
+
+      <section className="space-y-3 rounded-lg border bg-card p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-base font-semibold">Manutenção de equipamentos</h2>
+            <p className="text-xs text-muted-foreground">
+              Alertas de revisão vencida, paradas abertas, 3+ falhas ou 8+ horas paradas nos últimos
+              30 dias.
+            </p>
+          </div>
+          <Link to="/manutencao" className="text-sm font-medium text-primary hover:underline">
+            Abrir manutenção
+          </Link>
+        </div>
+        {manutencao.isError ? (
+          <p className="text-sm text-muted-foreground">
+            Acompanhe os alertas após aplicar a migration `manutencao.sql` no Supabase.
+          </p>
+        ) : manutencao.isLoading ? (
+          <p className="text-sm text-muted-foreground">Carregando indicadores…</p>
+        ) : manutencaoAlerts.length ? (
+          <ul className="divide-y">
+            {manutencaoAlerts.slice(0, 5).map((item) => {
+              const kinds = [
+                item.revisao_vencida ? "Revisão vencida" : "",
+                item.tem_parada_aberta ? "Parado" : "",
+                Number(item.falhas_30_dias) >= 3 ? `${item.falhas_30_dias} falhas/30d` : "",
+                Number(item.minutos_parado_30_dias) >= 480
+                  ? `${Math.floor(Number(item.minutos_parado_30_dias) / 60)}h parado/30d`
+                  : "",
+              ].filter(Boolean);
+              return (
+                <li
+                  key={item.equipamento_id}
+                  className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
+                >
+                  <span className="font-medium">{item.nome}</span>
+                  <span className="text-muted-foreground">{kinds.join(" · ")}</span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">Nenhum alerta de manutenção no momento.</p>
         )}
       </section>
 
