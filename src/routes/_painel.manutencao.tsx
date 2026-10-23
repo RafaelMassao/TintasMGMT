@@ -3,12 +3,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  BarChart3,
   CalendarClock,
   Check,
   Clock3,
   Gauge,
   History,
+  Package,
   Plus,
+  ShoppingCart,
+  Timer,
   Wrench,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -16,6 +20,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { StatusBadge, type StatusTone } from "@/components/shared/StatusBadge";
 import { StatCard } from "@/components/shared/StatCard";
 import { TableSkeleton } from "@/components/shared/Skeletons";
+import { ChartCard, SimpleBarChart } from "@/components/shared/ChartCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,6 +31,9 @@ import {
   ParadaForm,
   type EquipmentOption,
   type EquipmentRecord,
+  type LotOption,
+  type MaintenanceOption,
+  type OrderOption,
 } from "@/components/manutencao/ManutencaoForms";
 import { supabase } from "@/integrations/supabase/client";
 import { notify } from "@/lib/notify";
@@ -76,10 +84,21 @@ type Downtime = {
   id: string;
   equipamento_id: string;
   manutencao_id: string | null;
+  equipamento_codigo: string;
+  equipamento_nome: string;
+  manutencao_tipo: string | null;
   inicio_em: string;
   fim_em: string | null;
-  causa: string;
+  motivo: string;
   descricao: string | null;
+  duracao_minutos: number | string;
+  lote_id: string | null;
+  lote_numero: string | null;
+  pedido_id: string | null;
+  pedido_numero: string | null;
+  quantidade_nao_produzida: number | string | null;
+  unidade_nao_produzida: string;
+  atraso_causado_minutos: number | string;
   responsavel_nome: string;
 };
 
@@ -102,6 +121,21 @@ const fmtDuration = (minutesValue: number | string) => {
       .join(" ") || "0min"
   );
 };
+const localDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const datePart = (value: string) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value.slice(0, 10) : localDate(date);
+};
+const overlapMinutes = (item: Downtime, start: number, end: number) => {
+  const stopStart = new Date(item.inicio_em).getTime();
+  const stopEnd = item.fim_em ? new Date(item.fim_em).getTime() : Date.now();
+  const overlap = Math.min(stopEnd, end) - Math.max(stopStart, start);
+  return Math.max(0, Math.floor(overlap / 60_000));
+};
+const initialImpactFrom = () =>
+  localDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+const initialImpactTo = () => localDate(new Date());
 const maintenanceTypes: Record<string, string> = {
   preventiva: "Preventiva",
   corretiva: "Corretiva",
@@ -134,12 +168,16 @@ function ManutencaoPage() {
   const [editing, setEditing] = useState<EquipmentRecord | null>(null);
   const [equipmentFilter, setEquipmentFilter] = useState("todos");
   const [historyFilter, setHistoryFilter] = useState("todos");
+  const [impactFrom, setImpactFrom] = useState(initialImpactFrom);
+  const [impactTo, setImpactTo] = useState(initialImpactTo);
+  const [impactEquipmentFilter, setImpactEquipmentFilter] = useState("todos");
 
   const refresh = async () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ["manutencao-equipamentos"] }),
       queryClient.invalidateQueries({ queryKey: ["manutencao-agenda"] }),
       queryClient.invalidateQueries({ queryKey: ["manutencao-historico"] }),
+      queryClient.invalidateQueries({ queryKey: ["manutencao-historico-impacto"] }),
       queryClient.invalidateQueries({ queryKey: ["manutencao-dashboard"] }),
     ]);
 
@@ -201,19 +239,134 @@ function ManutencaoPage() {
   const maintenance = maintenanceQuery.data ?? [];
 
   const downtimeQuery = useQuery({
-    queryKey: ["manutencao-historico"],
+    queryKey: ["manutencao-historico-impacto"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("paradas_equipamento")
-        .select("id,equipamento_id,manutencao_id,inicio_em,fim_em,causa,descricao,responsavel_nome")
+        .from("v_paradas_impacto")
+        .select(
+          "id,equipamento_id,manutencao_id,equipamento_codigo,equipamento_nome,manutencao_tipo,inicio_em,fim_em,motivo,descricao,duracao_minutos,lote_id,lote_numero,pedido_id,pedido_numero,quantidade_nao_produzida,unidade_nao_produzida,atraso_causado_minutos,responsavel_nome",
+        )
         .order("inicio_em", { ascending: false })
-        .limit(1000);
+        .limit(2000);
       if (error) throw error;
       return (data ?? []) as unknown as Downtime[];
     },
     staleTime: 20_000,
   });
-  const downtimes = downtimeQuery.data ?? [];
+  const downtimes = useMemo(() => downtimeQuery.data ?? [], [downtimeQuery.data]);
+
+  const lotQuery = useQuery({
+    queryKey: ["manutencao-impacto-lotes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lotes_producao")
+        .select("id,numero_lote,pedido_id")
+        .order("numero_lote", { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return (data ?? []) as unknown as LotOption[];
+    },
+    staleTime: 60_000,
+  });
+  const orderQuery = useQuery({
+    queryKey: ["manutencao-impacto-pedidos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pedidos")
+        .select("id,numero")
+        .order("numero", { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return (data ?? []) as unknown as OrderOption[];
+    },
+    staleTime: 60_000,
+  });
+
+  const periodStart = impactFrom ? new Date(`${impactFrom}T00:00:00`).getTime() : 0;
+  const periodEnd = impactTo ? new Date(`${impactTo}T23:59:59.999`).getTime() : Date.now();
+  const validPeriod = periodEnd >= periodStart;
+  const impactRows = useMemo(
+    () =>
+      validPeriod
+        ? downtimes
+            .filter(
+              (item) =>
+                (impactEquipmentFilter === "todos" ||
+                  item.equipamento_id === impactEquipmentFilter) &&
+                overlapMinutes(item, periodStart, periodEnd) > 0,
+            )
+            .map((item) => ({
+              ...item,
+              periodMinutes: overlapMinutes(item, periodStart, periodEnd),
+            }))
+        : [],
+    [downtimes, impactEquipmentFilter, periodEnd, periodStart, validPeriod],
+  );
+  const totalPeriodMinutes = impactRows.reduce((sum, item) => sum + item.periodMinutes, 0);
+  const averageStopMinutes = impactRows.length ? totalPeriodMinutes / impactRows.length : 0;
+  const downtimeByEquipment = impactRows.reduce((map, item) => {
+    map.set(item.equipamento_id, (map.get(item.equipamento_id) ?? 0) + item.periodMinutes);
+    return map;
+  }, new Map<string, number>());
+  const topDowntimeEquipment = [...downtimeByEquipment.entries()].sort((a, b) => b[1] - a[1])[0];
+  const topEquipment = topDowntimeEquipment
+    ? equipmentById.get(topDowntimeEquipment[0])
+    : undefined;
+  const productionByUnit = impactRows.reduce((map, item) => {
+    if (item.quantidade_nao_produzida !== null) {
+      const unit = item.unidade_nao_produzida || "un";
+      map.set(unit, (map.get(unit) ?? 0) + Number(item.quantidade_nao_produzida));
+    }
+    return map;
+  }, new Map<string, number>());
+  const productionImpactLabel =
+    [...productionByUnit.entries()]
+      .map(
+        ([unit, quantity]) =>
+          `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(quantity)} ${unit}`,
+      )
+      .join(" · ") || "Sem dados";
+  const affectedOrders = new Set(
+    impactRows.filter((item) => item.pedido_id).map((item) => item.pedido_id),
+  );
+  const delayCausedMinutes = impactRows.reduce(
+    (sum, item) => sum + Number(item.atraso_causado_minutos || 0),
+    0,
+  );
+  const selectedPeriodMinutes = validPeriod
+    ? Math.max(0, (Math.min(periodEnd, Date.now()) - periodStart) / 60_000)
+    : 0;
+  const availabilityEquipmentCount =
+    impactEquipmentFilter === "todos"
+      ? equipment.filter((item) => item.ativo).length
+      : equipment.some((item) => item.equipamento_id === impactEquipmentFilter && item.ativo)
+        ? 1
+        : 0;
+  const totalAvailableMinutes = selectedPeriodMinutes * availabilityEquipmentCount;
+  const availabilityInPeriod = totalAvailableMinutes
+    ? Math.max(0, 100 * (1 - totalPeriodMinutes / totalAvailableMinutes))
+    : 0;
+  const comparisonData = [
+    { tipo: "Preventiva", count: "preventiva" },
+    { tipo: "Corretiva", count: "corretiva" },
+  ].map(({ tipo, count }) => {
+    const rows = impactRows.filter((item) => item.manutencao_tipo === count);
+    const maintenanceCount = maintenance.filter((item) => {
+      const date = datePart(item.data_conclusao ?? `${item.data_prevista}T12:00:00`);
+      return (
+        item.tipo === count &&
+        item.status !== "cancelada" &&
+        date >= impactFrom &&
+        date <= impactTo &&
+        (impactEquipmentFilter === "todos" || item.equipamento_id === impactEquipmentFilter)
+      );
+    }).length;
+    return {
+      tipo,
+      manutencoes: maintenanceCount,
+      horas_paradas: rows.reduce((sum, item) => sum + item.periodMinutes, 0) / 60,
+    };
+  });
 
   const updateMaintenance = useMutation({
     mutationFn: async ({
@@ -351,8 +504,8 @@ function ManutencaoPage() {
         <div role="alert" className="rounded-lg border border-warning/50 bg-warning/10 p-4 text-sm">
           <p className="font-medium">Não foi possível carregar os dados de manutenção.</p>
           <p className="mt-1 text-muted-foreground">
-            Confirme que a migration <code>supabase/manutencao.sql</code> foi executada no SQL
-            Editor do Supabase e atualize a página.
+            Confirme que `supabase/manutencao.sql` e `supabase/impacto_paradas.sql` foram executados
+            no SQL Editor do Supabase e atualize a página.
           </p>
         </div>
       )}
@@ -395,6 +548,7 @@ function ManutencaoPage() {
           <TabsTrigger value="paradas">
             Paradas ({downtimes.filter((item) => !item.fim_em).length})
           </TabsTrigger>
+          <TabsTrigger value="impacto">Impacto das paradas</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
 
@@ -643,6 +797,177 @@ function ManutencaoPage() {
           />
         </TabsContent>
 
+        <TabsContent value="impacto" className="mt-4 space-y-4">
+          <section className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground" htmlFor="impacto-de">
+                De
+              </label>
+              <Input
+                id="impacto-de"
+                type="date"
+                value={impactFrom}
+                onChange={(e) => setImpactFrom(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground" htmlFor="impacto-ate">
+                Até
+              </label>
+              <Input
+                id="impacto-ate"
+                type="date"
+                value={impactTo}
+                onChange={(e) => setImpactTo(e.target.value)}
+              />
+            </div>
+            <div className="min-w-56 flex-1">
+              <label
+                className="mb-1 block text-xs text-muted-foreground"
+                htmlFor="impacto-equipamento"
+              >
+                Equipamento
+              </label>
+              <select
+                id="impacto-equipamento"
+                className={selectClass}
+                value={impactEquipmentFilter}
+                onChange={(e) => setImpactEquipmentFilter(e.target.value)}
+              >
+                <option value="todos">Todos os equipamentos</option>
+                {equipment.map((item) => (
+                  <option key={item.equipamento_id} value={item.equipamento_id}>
+                    {item.codigo} — {item.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="w-full text-xs text-muted-foreground">
+              Duração calculada entre início e fim; paradas abertas contam até agora. A
+              disponibilidade usa o total de horas do período e os equipamentos ativos.
+            </p>
+          </section>
+
+          {!validPeriod && (
+            <p
+              role="alert"
+              className="rounded-md border border-warning/50 bg-warning/10 p-3 text-sm"
+            >
+              A data inicial deve ser anterior ou igual à data final.
+            </p>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              label="Horas totais paradas"
+              value={`${(totalPeriodMinutes / 60).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} h`}
+              hint="No período e filtro selecionados"
+              icon={Timer}
+            />
+            <StatCard
+              label="Número de paradas"
+              value={String(impactRows.length)}
+              hint="Inclui paradas em andamento"
+              icon={BarChart3}
+            />
+            <StatCard
+              label="Tempo médio de parada"
+              value={fmtDuration(averageStopMinutes)}
+              hint="Média por ocorrência no período"
+              icon={Clock3}
+            />
+            <StatCard
+              label="Maior tempo parado"
+              value={topEquipment?.nome ?? "—"}
+              hint={
+                topDowntimeEquipment
+                  ? fmtDuration(topDowntimeEquipment[1])
+                  : "Sem paradas no período"
+              }
+              icon={Wrench}
+            />
+            <StatCard
+              label="Produção afetada"
+              value={productionImpactLabel}
+              hint="Soma por unidade para não misturar medidas"
+              icon={Package}
+            />
+            <StatCard
+              label="Pedidos afetados"
+              value={String(affectedOrders.size)}
+              hint="Pedidos distintos vinculados às paradas"
+              icon={ShoppingCart}
+            />
+            <StatCard
+              label="Atraso causado"
+              value={fmtDuration(delayCausedMinutes)}
+              hint="Estimativa informada no registro da parada"
+              icon={AlertTriangle}
+            />
+            <StatCard
+              label="Disponibilidade"
+              value={
+                totalAvailableMinutes
+                  ? `${availabilityInPeriod.toFixed(1).replace(".", ",")}%`
+                  : "—"
+              }
+              hint="No período · ativos cadastrados"
+              icon={Gauge}
+              tone={
+                availabilityInPeriod >= 95
+                  ? "success"
+                  : availabilityInPeriod >= 85
+                    ? "warning"
+                    : "destructive"
+              }
+            />
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ChartCard
+              title="Quantidade de manutenções"
+              subtitle="Comparação entre preventiva e corretiva no período selecionado"
+            >
+              <SimpleBarChart
+                data={comparisonData}
+                xKey="tipo"
+                series={[{ key: "manutencoes", label: "Manutenções", color: "var(--chart-1)" }]}
+              />
+            </ChartCard>
+            <ChartCard
+              title="Horas paradas associadas"
+              subtitle="Paradas vinculadas a uma manutenção do tipo correspondente"
+            >
+              <SimpleBarChart
+                data={comparisonData}
+                xKey="tipo"
+                series={[{ key: "horas_paradas", label: "Horas paradas", color: "var(--chart-4)" }]}
+              />
+            </ChartCard>
+          </div>
+
+          <section className="space-y-3 rounded-lg border bg-card p-4">
+            <div>
+              <h2 className="font-display font-semibold">Detalhamento do impacto por parada</h2>
+              <p className="text-xs text-muted-foreground">
+                Produção perdida e atraso são valores informados no registro. Duração é calculada
+                automaticamente.
+              </p>
+            </div>
+            <DowntimeImpactTable rows={impactRows} loading={downtimeQuery.isLoading} />
+          </section>
+          {(downtimeQuery.isError || lotQuery.isError || orderQuery.isError) && (
+            <p
+              role="alert"
+              className="rounded-md border border-warning/50 bg-warning/10 p-3 text-sm"
+            >
+              Para carregar todos os impactos, confirme que `supabase/impacto_paradas.sql`,
+              `supabase/manutencao.sql`, `supabase/producao_envase.sql` e `supabase/pedidos.sql`
+              foram executados no SQL Editor do Supabase.
+            </p>
+          )}
+        </TabsContent>
+
         <TabsContent value="historico" className="mt-4 space-y-4">
           <div className="max-w-sm">
             <label
@@ -708,6 +1033,9 @@ function ManutencaoPage() {
         open={paradaOpen}
         onOpenChange={setParadaOpen}
         equipamentos={equipmentOptions}
+        lotes={lotQuery.data ?? []}
+        pedidos={orderQuery.data ?? []}
+        manutencoes={maintenance}
         responsavelId={identity.data?.id ?? null}
         responsavelNome={identity.data?.nome ?? "Usuário autenticado"}
       />
@@ -839,6 +1167,79 @@ function MaintenanceList({
   );
 }
 
+function DowntimeImpactTable({
+  rows,
+  loading,
+}: {
+  rows: Array<Downtime & { periodMinutes: number }>;
+  loading: boolean;
+}) {
+  if (loading) return <TableSkeleton rows={5} />;
+  if (!rows.length)
+    return (
+      <EmptyState
+        icon={BarChart3}
+        compact
+        title="Nenhuma parada no período"
+        description="Ajuste as datas ou registre uma parada para acompanhar o impacto produtivo."
+      />
+    );
+  return (
+    <div className="overflow-x-auto rounded-md border">
+      <table className="w-full min-w-[1250px] text-sm">
+        <thead>
+          <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+            <th className="p-3">Equipamento</th>
+            <th className="p-3">Motivo</th>
+            <th className="p-3">Início</th>
+            <th className="p-3">Fim</th>
+            <th className="p-3">Duração</th>
+            <th className="p-3">Lote afetado</th>
+            <th className="p-3">Pedido afetado</th>
+            <th className="p-3">Produção não realizada</th>
+            <th className="p-3">Atraso causado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((item) => (
+            <tr key={item.id} className="border-b last:border-0">
+              <td className="p-3">
+                <p className="font-medium">{item.equipamento_nome}</p>
+                <p className="font-mono text-xs text-muted-foreground">{item.equipamento_codigo}</p>
+              </td>
+              <td className="p-3">
+                <p>{item.motivo}</p>
+                {item.manutencao_tipo && (
+                  <p className="text-xs text-muted-foreground">
+                    {maintenanceLabel(item.manutencao_tipo)}
+                  </p>
+                )}
+              </td>
+              <td className="p-3 whitespace-nowrap">{fmtDateTime(item.inicio_em)}</td>
+              <td className="p-3 whitespace-nowrap">
+                {item.fim_em ? fmtDateTime(item.fim_em) : "Em andamento"}
+              </td>
+              <td className="p-3 whitespace-nowrap tabular-nums">
+                {fmtDuration(item.duracao_minutos)}
+              </td>
+              <td className="p-3">{item.lote_numero ?? "—"}</td>
+              <td className="p-3">{item.pedido_numero ?? "—"}</td>
+              <td className="p-3 whitespace-nowrap tabular-nums">
+                {item.quantidade_nao_produzida === null
+                  ? "Não informado"
+                  : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(Number(item.quantidade_nao_produzida))} ${item.unidade_nao_produzida}`}
+              </td>
+              <td className="p-3 whitespace-nowrap tabular-nums">
+                {fmtDuration(item.atraso_causado_minutos)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function DowntimeList({
   rows,
   equipmentById,
@@ -889,7 +1290,7 @@ function DowntimeList({
                 </StatusBadge>
               </div>
               <p className="mt-1 text-sm">
-                {item.causa}
+                {item.motivo}
                 {item.descricao ? ` · ${item.descricao}` : ""}
               </p>
               <p className="text-xs text-muted-foreground">
