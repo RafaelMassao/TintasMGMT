@@ -7,11 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { notify } from "@/lib/notify";
 import { type Lote, opcoesProducao, traduzirErroProducao } from "@/lib/producao";
+import { dataISOValida, numeroPtBR } from "@/lib/validacao";
 
 export const selectClass =
   "flex h-9 w-full rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
-type Chave = "numero_lote" | "produto_id" | "tanque_id" | "quantidade_planejada" | "volume_planejado_litros" | "quantidade_produzida" | "volume_produzido_litros" | "data_planejada" | "observacoes";
+type Chave =
+  | "numero_lote"
+  | "produto_id"
+  | "tanque_id"
+  | "quantidade_planejada"
+  | "volume_planejado_litros"
+  | "quantidade_produzida"
+  | "volume_produzido_litros"
+  | "data_planejada"
+  | "observacoes";
 type Valores = Record<Chave, string>;
 
 export function LoteForm({
@@ -26,7 +36,11 @@ export function LoteForm({
   onSalvo?: (id: string) => void;
 }) {
   const qc = useQueryClient();
-  const opcoes = useQuery({ queryKey: ["opcoes", "producao"], queryFn: opcoesProducao, enabled: open });
+  const opcoes = useQuery({
+    queryKey: ["opcoes", "producao"],
+    queryFn: opcoesProducao,
+    enabled: open,
+  });
   const [v, setV] = useState<Valores>(() => ({
     numero_lote: lote?.numero_lote ?? "",
     produto_id: lote?.produto_id ?? "",
@@ -39,10 +53,19 @@ export function LoteForm({
     observacoes: lote?.observacoes ?? "",
   }));
   const [erros, setErros] = useState<Partial<Valores>>({});
-  const set = (k: Chave) => (e: { target: { value: string } }) => setV((s) => ({ ...s, [k]: e.target.value }));
+  const set = (k: Chave) => (e: { target: { value: string } }) =>
+    setV((s) => ({ ...s, [k]: e.target.value }));
 
   const salvar = useMutation({
     mutationFn: async (dados: Record<string, unknown>) => {
+      const { data: duplicado, error: consultaError } = await supabase
+        .from("lotes_producao")
+        .select("id")
+        .ilike("numero_lote", String(dados["numero_lote"]))
+        .neq("id", lote?.id ?? "00000000-0000-0000-0000-000000000000")
+        .maybeSingle();
+      if (consultaError) throw consultaError;
+      if (duplicado) throw new Error("Já existe um lote com este número.");
       if (lote) {
         const { error } = await supabase.from("lotes_producao").update(dados).eq("id", lote.id);
         if (error) throw error;
@@ -64,21 +87,30 @@ export function LoteForm({
       onOpenChange(false);
       onSalvo?.(id);
     },
-    onError: (e: Error) => notify.error("Não foi possível salvar", traduzirErroProducao(e.message)),
+    onError: (e: Error) => {
+      if (/lote com este número|duplicate key|unique constraint/i.test(e.message))
+        setErros((atual) => ({ ...atual, numero_lote: "Já existe um lote com este número." }));
+      notify.error("Não foi possível salvar", traduzirErroProducao(e.message));
+    },
   });
 
   function enviar() {
     const e: Partial<Valores> = {};
     if (!v.numero_lote.trim()) e.numero_lote = "Informe o número do lote.";
     if (!v.produto_id) e.produto_id = "Escolha o produto.";
+    if (v.data_planejada && !dataISOValida(v.data_planejada))
+      e.data_planejada = "Informe uma data válida.";
     const n = (k: Chave, obrig: boolean) => {
-      const raw = (v[k] ?? "").replace(",", ".");
+      const raw = (v[k] ?? "").trim();
       if (!raw) {
         if (obrig) e[k] = "Campo obrigatório.";
         return 0;
       }
-      const x = Number(raw);
-      if (Number.isNaN(x) || x < 0) e[k] = "Informe um número igual ou maior que zero.";
+      const x = numeroPtBR(raw);
+      if (x === null || !Number.isFinite(x) || x < 0) {
+        e[k] = "Informe um número válido, igual ou maior que zero.";
+        return Number.NaN;
+      }
       return x;
     };
     const qp = n("quantidade_planejada", true);
@@ -112,40 +144,100 @@ export function LoteForm({
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField id="numero_lote" label="Número do lote *" error={erros.numero_lote}>
-          <Input id="numero_lote" value={v.numero_lote} onChange={set("numero_lote")} placeholder="Ex.: L2026-0001" />
+          <Input
+            id="numero_lote"
+            value={v.numero_lote}
+            onChange={set("numero_lote")}
+            placeholder="Ex.: L2026-0001"
+          />
         </FormField>
-        <FormField id="data_planejada" label="Data planejada">
-          <Input id="data_planejada" type="date" value={v.data_planejada} onChange={set("data_planejada")} />
+        <FormField id="data_planejada" label="Data planejada" error={erros.data_planejada}>
+          <Input
+            id="data_planejada"
+            type="date"
+            value={v.data_planejada}
+            onChange={set("data_planejada")}
+          />
         </FormField>
         <FormField id="produto_id" label="Produto *" error={erros.produto_id}>
-          <select id="produto_id" className={selectClass} value={v.produto_id} onChange={set("produto_id")}>
+          <select
+            id="produto_id"
+            className={selectClass}
+            value={v.produto_id}
+            onChange={set("produto_id")}
+          >
             <option value="">{opcoes.isLoading ? "Carregando..." : "Selecione"}</option>
             {opcoes.data?.produtos.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
         </FormField>
         <FormField id="tanque_id" label="Tanque">
-          <select id="tanque_id" className={selectClass} value={v.tanque_id} onChange={set("tanque_id")}>
+          <select
+            id="tanque_id"
+            className={selectClass}
+            value={v.tanque_id}
+            onChange={set("tanque_id")}
+          >
             <option value="">Sem tanque</option>
             {opcoes.data?.tanques.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
         </FormField>
-        <FormField id="quantidade_planejada" label="Quantidade planejada *" error={erros.quantidade_planejada}>
-          <Input id="quantidade_planejada" inputMode="decimal" value={v.quantidade_planejada} onChange={set("quantidade_planejada")} />
+        <FormField
+          id="quantidade_planejada"
+          label="Quantidade planejada *"
+          error={erros.quantidade_planejada}
+        >
+          <Input
+            id="quantidade_planejada"
+            inputMode="decimal"
+            value={v.quantidade_planejada}
+            onChange={set("quantidade_planejada")}
+          />
         </FormField>
-        <FormField id="volume_planejado_litros" label="Volume planejado (L) *" error={erros.volume_planejado_litros}>
-          <Input id="volume_planejado_litros" inputMode="decimal" value={v.volume_planejado_litros} onChange={set("volume_planejado_litros")} />
+        <FormField
+          id="volume_planejado_litros"
+          label="Volume planejado (L) *"
+          error={erros.volume_planejado_litros}
+        >
+          <Input
+            id="volume_planejado_litros"
+            inputMode="decimal"
+            value={v.volume_planejado_litros}
+            onChange={set("volume_planejado_litros")}
+          />
         </FormField>
         {lote && (
           <>
-            <FormField id="quantidade_produzida" label="Quantidade produzida" error={erros.quantidade_produzida}>
-              <Input id="quantidade_produzida" inputMode="decimal" value={v.quantidade_produzida} onChange={set("quantidade_produzida")} />
+            <FormField
+              id="quantidade_produzida"
+              label="Quantidade produzida"
+              error={erros.quantidade_produzida}
+            >
+              <Input
+                id="quantidade_produzida"
+                inputMode="decimal"
+                value={v.quantidade_produzida}
+                onChange={set("quantidade_produzida")}
+              />
             </FormField>
-            <FormField id="volume_produzido_litros" label="Volume produzido (L)" error={erros.volume_produzido_litros}>
-              <Input id="volume_produzido_litros" inputMode="decimal" value={v.volume_produzido_litros} onChange={set("volume_produzido_litros")} />
+            <FormField
+              id="volume_produzido_litros"
+              label="Volume produzido (L)"
+              error={erros.volume_produzido_litros}
+            >
+              <Input
+                id="volume_produzido_litros"
+                inputMode="decimal"
+                value={v.volume_produzido_litros}
+                onChange={set("volume_produzido_litros")}
+              />
             </FormField>
           </>
         )}

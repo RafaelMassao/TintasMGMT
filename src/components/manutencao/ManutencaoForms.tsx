@@ -6,6 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { selectClass } from "@/components/producao/LoteForm";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  dataHoraLocalValida,
+  dataISOValida,
+  mensagemErroValidacao,
+  numeroPtBR,
+} from "@/lib/validacao";
 
 type EquipmentKind = "tanque" | "motor" | "bomba" | "envase" | "maquina_pintura";
 export type EquipmentOption = { id: string; codigo: string; nome: string; ativo: boolean };
@@ -78,6 +84,14 @@ export function EquipamentoForm({
     mutationFn: async () => {
       const intervalo = periodo.trim() ? Number(periodo) : null;
       if (!codigo.trim() || !nome.trim()) throw new Error("Informe código e nome do equipamento.");
+      const { data: duplicado, error: erroConsulta } = await supabase
+        .from("equipamentos")
+        .select("id")
+        .ilike("codigo", codigo.trim())
+        .neq("id", equipamento?.id ?? "00000000-0000-0000-0000-000000000000")
+        .maybeSingle();
+      if (erroConsulta) throw erroConsulta;
+      if (duplicado) throw new Error("Já existe um equipamento com este código.");
       if (intervalo !== null && (!Number.isInteger(intervalo) || intervalo < 1 || intervalo > 3650))
         throw new Error("A periodicidade deve ser um número inteiro entre 1 e 3.650 dias.");
       const values = {
@@ -114,7 +128,7 @@ export function EquipamentoForm({
       }
       onOpenChange(false);
     },
-    onError: (error: Error) => setErro(error.message),
+    onError: (error: Error) => setErro(mensagemErroValidacao(error.message)),
   });
   return (
     <FormModal
@@ -242,7 +256,7 @@ export function ManutencaoForm({
   const mutation = useMutation({
     mutationFn: async () => {
       if (!equipamentoId) throw new Error("Selecione um equipamento.");
-      if (!dataPrevista || !descricao.trim())
+      if (!dataISOValida(dataPrevista) || !descricao.trim())
         throw new Error("Informe a data prevista e a descrição.");
       const { error } = await supabase.from("manutencoes").insert({
         equipamento_id: equipamentoId,
@@ -261,7 +275,7 @@ export function ManutencaoForm({
       setObservacao("");
       onOpenChange(false);
     },
-    onError: (error: Error) => setErro(error.message),
+    onError: (error: Error) => setErro(mensagemErroValidacao(error.message)),
   });
   return (
     <FormModal
@@ -384,17 +398,19 @@ export function ParadaForm({
     mutationFn: async () => {
       if (!equipamentoId || !causa.trim() || !inicio)
         throw new Error("Equipamento, início e causa são obrigatórios.");
+      if (!dataHoraLocalValida(inicio))
+        throw new Error("Informe uma data e hora válidas para o início da parada.");
       const inicioDate = new Date(inicio);
       if (Number.isNaN(inicioDate.getTime()) || inicioDate.getTime() > Date.now())
         throw new Error("O início da parada não pode estar no futuro.");
-      const quantidadePerdida = quantidade.trim() ? Number(quantidade) : null;
-      const atraso = Number(atrasoMinutos);
+      const quantidadePerdida = quantidade.trim() ? numeroPtBR(quantidade) : null;
+      const atraso = numeroPtBR(atrasoMinutos);
       if (
-        quantidadePerdida !== null &&
-        (!Number.isFinite(quantidadePerdida) || quantidadePerdida < 0)
+        quantidade.trim() &&
+        (quantidadePerdida === null || !Number.isFinite(quantidadePerdida) || quantidadePerdida < 0)
       )
         throw new Error("A quantidade não produzida deve ser um número igual ou maior que zero.");
-      if (!Number.isInteger(atraso) || atraso < 0)
+      if (atraso === null || !Number.isInteger(atraso) || atraso < 0)
         throw new Error(
           "O atraso causado deve ser informado em minutos inteiros, sem valor negativo.",
         );
@@ -426,7 +442,7 @@ export function ParadaForm({
       setAtrasoMinutos("0");
       onOpenChange(false);
     },
-    onError: (error: Error) => setErro(error.message),
+    onError: (error: Error) => setErro(mensagemErroValidacao(error.message)),
   });
   return (
     <FormModal

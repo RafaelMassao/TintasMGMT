@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { selectClass } from "@/components/producao/LoteForm";
 import { notify } from "@/lib/notify";
+import { dataISOValida, numeroPtBR } from "@/lib/validacao";
 
 export type PerdaItemTipo = "material" | "produto" | "embalagem";
 export type ItemOpcao = {
@@ -101,15 +102,15 @@ export function PerdaForm({
 
   const salvar = useMutation({
     mutationFn: async () => {
-      const qtd = Number(quantidade.replace(",", "."));
-      const valor = valorEstimado.trim() ? Number(valorEstimado.replace(",", ".")) : 0;
-      if (!data) throw new Error("Informe a data da perda.");
+      const qtd = numeroPtBR(quantidade);
+      const valor = valorEstimado.trim() ? numeroPtBR(valorEstimado) : 0;
+      if (!dataISOValida(data)) throw new Error("Informe uma data válida para a perda.");
       if (!selecionado) throw new Error("Selecione um produto, material ou embalagem.");
       if (!motivo.trim()) throw new Error("Informe o motivo da perda.");
-      if (!Number.isFinite(qtd) || qtd <= 0)
+      if (qtd === null || !Number.isFinite(qtd) || qtd <= 0)
         throw new Error("A quantidade deve ser maior que zero.");
       if (!unidade.trim()) throw new Error("Informe a unidade de medida.");
-      if (!Number.isFinite(valor) || valor < 0)
+      if (valor === null || !Number.isFinite(valor) || valor < 0)
         throw new Error("O valor estimado deve ser zero ou maior.");
       if (geraBaixa && etapa !== "estoque")
         throw new Error("A baixa automática exige a etapa Estoque.");

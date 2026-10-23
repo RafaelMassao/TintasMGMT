@@ -17,6 +17,7 @@ import { selectClass } from "@/components/producao/LoteForm";
 import { notify } from "@/lib/notify";
 import { fmtMoeda, hojeISO } from "@/lib/pedidos";
 import { numCompras, type FornecedorOpcao, type MaterialOpcao } from "@/lib/compras";
+import { dataISOValida, numeroPtBR } from "@/lib/validacao";
 
 type Linha = { key: string; material_id: string; quantidade: string; preco: string };
 const novaLinha = (): Linha => ({
@@ -25,7 +26,7 @@ const novaLinha = (): Linha => ({
   quantidade: "",
   preco: "0",
 });
-const numero = (v: string) => Number(v.replace(",", "."));
+const numero = (v: string) => numeroPtBR(v) ?? Number.NaN;
 
 export function PedidoCompraForm({
   open,
@@ -127,8 +128,10 @@ export function PedidoCompraForm({
   function validar() {
     const next: Record<string, string> = {};
     if (!fornecedorId) next["fornecedor"] = "Selecione um fornecedor.";
-    if (!dataPedido) next["data"] = "Informe a data do pedido.";
-    if (previsao && previsao < dataPedido)
+    if (!dataISOValida(dataPedido)) next["data"] = "Informe uma data válida para o pedido.";
+    if (previsao && !dataISOValida(previsao))
+      next["previsao"] = "Informe uma data de previsão válida.";
+    else if (previsao && dataISOValida(dataPedido) && previsao < dataPedido)
       next["previsao"] = "A previsão não pode ser anterior à data do pedido.";
     if (!linhas.length) next["itens"] = "Inclua ao menos um material.";
     const selecionados = linhas.map((l) => l.material_id).filter(Boolean);
