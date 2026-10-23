@@ -29,7 +29,7 @@ const ACESSO: Record<string, Perfil[]> = {
   "/atrasos": ["producao", "vendas", "estoque", "manutencao"],
   "/manutencao": ["manutencao"], // equipamentos, manutenções e paradas
   "/cadastros": ["vendas", "manutencao", "estoque", "producao"], // leitura para todos; edição conforme o cadastro
-  "/relatorios": [],
+  "/relatorios": [...PERFIS], // cada relatório aplica novamente as permissões do módulo de origem
   "/configuracoes": [],
 };
 
