@@ -221,7 +221,7 @@ function DashboardPage() {
     equipamento: "todos",
   });
 
-  const { catalogos, producao, vendas, estoque, perdas, paradas } = useDashboardData({
+  const { catalogos, producao, vendas, estoque, perdas, paradas, manutencoes } = useDashboardData({
     podeProducao,
     podeVendas,
     podeEstoque,
@@ -521,6 +521,19 @@ function DashboardPage() {
     (parada) => parada.equipamento_nome || "Equipamento sem nome",
     (parada) => minutosSobrepostos(parada) / 60,
   );
+  const manutencoesPeriodo = (manutencoes.data ?? []).filter(
+    (item) =>
+      item.status !== "cancelada" &&
+      (filtros.equipamento === "todos" || item.equipamento_id === filtros.equipamento),
+  );
+  const manutencoesPorTipo = [
+    { nome: "Preventiva", tipo: "preventiva" },
+    { nome: "Corretiva", tipo: "corretiva" },
+  ].map(({ nome, tipo }) => ({
+    nome,
+    valor: manutencoesPeriodo.filter((item) => item.tipo === tipo).length,
+  }));
+  const temManutencoesComparaveis = manutencoesPorTipo.some((item) => item.valor > 0);
 
   const periodRecords: { data: string; valor: number; serie: "producao" | "vendas" }[] = [];
   for (const lote of producaoFiltrada) {
@@ -928,6 +941,21 @@ function DashboardPage() {
               data={perdasPorMotivo}
               xKey="nome"
               series={[{ key: "valor", label: "Registros", color: "var(--chart-2)" }]}
+            />
+          </DashboardChartFrame>
+        )}
+        {podeParadas && (
+          <DashboardChartFrame
+            title="Manutenção preventiva x corretiva"
+            subtitle="Quantidade de manutenções no período; considera data de conclusão ou, se pendente, data prevista. Canceladas não são contadas."
+            loading={manutencoes.isLoading}
+            error={manutencoes.error}
+            hasData={temManutencoesComparaveis}
+          >
+            <SimpleBarChart
+              data={manutencoesPorTipo}
+              xKey="nome"
+              series={[{ key: "valor", label: "Manutenções", color: "var(--chart-1)" }]}
             />
           </DashboardChartFrame>
         )}
